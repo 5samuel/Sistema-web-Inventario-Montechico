@@ -5,7 +5,6 @@ import {
   Btn1,
   ConvertirCapitalize,
   useProductosStore,
-  ContainerSelector,
   Switch1,
   Selector,
   useSucursalesStore,
@@ -15,6 +14,8 @@ import {
   useAlmacenesStore,
   ConvertirMinusculas,
 } from "../../../index";
+
+import {ContainerSelector} from"../../atomos/ContainerSelector";
 import { useForm } from "react-hook-form";
 import { useEmpresaStore } from "../../../store/EmpresaStore";
 import { useMutation, useQuery } from "@tanstack/react-query";

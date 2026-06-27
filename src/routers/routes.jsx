@@ -28,6 +28,7 @@ import { Reportes } from "../pages/Reportes";
 import { ReportInventarios } from "../components/organismos/reports/ReportInventarios";
 import ReportVentas from "../components/organismos/reports/ReportVentas";
 import ReportStockBajoMinimo from "../components/organismos/reports/ReportStockBajoMinimo";
+import {PedidosCompra} from"../pages/PedidosCompra";
 
 export function MyRoutes() {
   return (
@@ -72,6 +73,17 @@ export function MyRoutes() {
           </Layout>
         }
       />
+<Route
+  path="/pedidos"
+  element={
+    <Layout>
+      <ProtectedRoute accessBy="authenticated">
+        <PedidosCompra />
+      </ProtectedRoute>
+    </Layout>
+  }
+/>
+     
        <Route
         path="/reportes"
         element={
@@ -82,6 +94,8 @@ export function MyRoutes() {
           </Layout>
         }
       >
+
+     
         <Route path="inventario_valorado" element={<ReportInventarios/>}  />
         <Route path="report_ventas" element={<ReportVentas/>}  />
          <Route path="report_stock_bajo_minimo" element={<ReportStockBajoMinimo />} />
