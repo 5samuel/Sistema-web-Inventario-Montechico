@@ -80,12 +80,16 @@ export function RegistrarPedidosCompra({
     if (!productoSeleccionado) return toast.warning("Selecciona un producto");
     if (cantidad <= 0) return toast.warning("La cantidad debe ser mayor a 0");
 
+    const precioNum = parseFloat(precioCompra);
+    const cantNum = parseFloat(cantidad);
+    const subtotalCalculado = cantNum * precioNum;
+
     const existe = detallePedido.find((item) => item.id_producto === productoSeleccionado.id);
     if (existe) {
       setDetallePedido(
         detallePedido.map((item) =>
           item.id_producto === productoSeleccionado.id
-            ? { ...item, cantidad: item.cantidad + parseFloat(cantidad), subtotal: (item.cantidad + parseFloat(cantidad)) * item.precio_compra }
+            ? { ...item, cantidad: item.cantidad + cantNum, subtotal: (item.cantidad + cantNum) * item.precio_compra, total: (item.cantidad + cantNum) * item.precio_compra }
             : item
         )
       );
@@ -95,9 +99,10 @@ export function RegistrarPedidosCompra({
         {
           id_producto: productoSeleccionado.id,
           nombre: productoSeleccionado.nombre,
-          cantidad: parseFloat(cantidad),
-          precio_compra: parseFloat(precioCompra),
-          subtotal: parseFloat(cantidad) * parseFloat(precioCompra),
+          cantidad: cantNum,
+          precio_compra: precioNum,
+          subtotal: subtotalCalculado,
+          total: subtotalCalculado,
         },
       ]);
     }
@@ -145,57 +150,32 @@ export function RegistrarPedidosCompra({
     setPrecioCompra(prod?.precio_compra || 0);
   };
 
-  // 🔄 EFECTO DE RE-INICIALIZACIÓN CORREGIDO CON AUTO-DETECCIÓN
   useEffect(() => {
     if (accion === "Editar" && dataSelect) {
-      // 1. Asignar descripción de forma segura
       setValue("descripcion", dataSelect.observacion || dataSelect.descripcion || "");
       
-      // 🔍 DEBUGGING: Esto te mostrará exactamente qué tiene dataSelect por dentro en tu consola f12
-      console.log("Datos del pedido seleccionados para editar:", dataSelect);
-
-      // 2. BUSCAR EL ARRAY DE DETALLES (Prueba todas las variantes comunes de nombres de llaves)
-      const origenDetalles = 
-        dataSelect.detalles || 
-        dataSelect.detalle || 
-        dataSelect.detalles_pedido_compra || 
-        dataSelect.detalle_pedido_compra ||
-        dataSelect.detalles_pedido ||
-        dataSelect.pedido_compra_detalles;
+      const origenDetalles = dataSelect.detalle_pedido_compra || dataSelect.detalles || dataSelect.detalle;
       
       if (origenDetalles) {
-        // Validar si viene en string/JSON o directamente como Array de objetos de base de datos
         const listaCruda = typeof origenDetalles === "string" ? JSON.parse(origenDetalles) : origenDetalles;
-        
         if (Array.isArray(listaCruda)) {
           const mapeoProductos = listaCruda.map((item) => {
-            // Extraer el nombre de forma profunda (Mapea si viene anidado en 'productos' o 'id_producto')
-            const nombreExtraido = 
-              item.nombre || 
-              item.producto || 
-              item.nombre_producto || 
-              (item.productos && (item.productos.nombre || item.productos.descripcion)) || 
-              (item.producto_item && item.producto_item.nombre) ||
-              "Producto sin nombre";
-
-            const precioExtraido = parseFloat(item.precio_compra || item.costo || item.precio || item.precio_unitario || 0);
+            const nombreExtraido = item.nombre || item.productos?.nombre || "Producto sin nombre";
+            const precioExtraido = parseFloat(item.precio_compra || 0);
             const cantidadExtraida = parseFloat(item.cantidad || 0);
-            const idProductoExtraido = item.id_producto || item.idproducto || (item.productos && item.productos.id) || item.id;
 
             return {
-              id_producto: idProductoExtraido,
+              id_producto: item.id_producto,
               nombre: nombreExtraido,
               cantidad: cantidadExtraida,
               precio_compra: precioExtraido,
-              subtotal: parseFloat(item.subtotal || (cantidadExtraida * precioExtraido)),
+              subtotal: parseFloat(item.total || item.subtotal || (cantidadExtraida * precioExtraido)),
             };
           });
-          
           setDetallePedido(mapeoProductos);
         }
       }
 
-      // 3. Sincronizar selectores de cabecera
       if (dataSelect.id_sucursal && dataSucursales) {
         const sucEncontrada = dataSucursales.find(s => s.id === dataSelect.id_sucursal);
         if (sucEncontrada) selectSucursal(sucEncontrada);
@@ -206,9 +186,8 @@ export function RegistrarPedidosCompra({
         if (almEncontrado) setAlmacenSelectItem(almEncontrado);
       }
 
-      if ((dataSelect.id_proveedor || dataSelect.id_clipro) && dataclipro) {
-        const idProv = dataSelect.id_proveedor || dataSelect.id_clipro;
-        const provEncontrado = dataclipro.find(p => p.id === idProv);
+      if (dataSelect.id_proveedor && dataclipro) {
+        const provEncontrado = dataclipro.find(p => p.id === dataSelect.id_proveedor);
         if (provEncontrado) selectCliPro(provEncontrado);
       }
     } else {
@@ -233,61 +212,68 @@ export function RegistrarPedidosCompra({
           </div>
 
           <form className="formulario" onSubmit={handleSubmit(doGuardar)}>
-            <section className="seccion1">
-              <ContainerSelector>
-                <label>Sucursal Destino: </label>
-                <SelectList
-                  data={dataSucursales || []}
-                  itemSelect={sucursalesItemSelect}
-                  onSelect={selectSucursal}
-                  displayField="nombre"
-                />
-              </ContainerSelector>
-
-              <ContainerSelector>
-                <label>Almacén Receptor: </label>
-                <SelectList
-                  data={dataAlmacenes || []}
-                  itemSelect={almacenSelectItem}
-                  onSelect={setAlmacenSelectItem}
-                  displayField="nombre"
-                />
-              </ContainerSelector>
-
-              <ContainerSelector>
-                <label>Proveedor Asignado: </label>
-                <SelectList
-                  data={dataclipro || []}
-                  itemSelect={cliproItemSelect}
-                  onSelect={selectCliPro}
-                  displayField="nombres" 
-                />
-              </ContainerSelector>
-
-              <article>
-                <InputText icono={<v.iconoflechaderecha />}>
-                  <input
-                    className="form__field"
-                    type="text"
-                    placeholder="Notas o descripción"
-                    {...register("descripcion", { required: true })}
-                  />
-                  <label className="form__label">Notas / Descripción</label>
-                  {errors.descripcion && <p className="error">Requerido</p>}
-                </InputText>
-              </article>
-            </section>
-
-            <section className="seccion2">
-              <DetailBox>
-                <h3>Agregar Productos al Pedido</h3>
-                <div className="grilla-agregar">
+            {/* PANEL DE CONFIGURACIÓN / CABECERA */}
+            <section className="seccion1 card-panel">
+              <h2>Datos de la Cabecera</h2>
+              <div className="input-group">
+                <ContainerSelector>
+                  <label>Sucursal Destino </label>
                   <SelectList
-                    data={dataProductos || []}
-                    itemSelect={productoSeleccionado}
-                    onSelect={handleSelectProducto}
+                    data={dataSucursales || []}
+                    itemSelect={sucursalesItemSelect}
+                    onSelect={selectSucursal}
                     displayField="nombre"
                   />
+                </ContainerSelector>
+
+                <ContainerSelector>
+                  <label>Almacén Receptor </label>
+                  <SelectList
+                    data={dataAlmacenes || []}
+                    itemSelect={almacenSelectItem}
+                    onSelect={setAlmacenSelectItem}
+                    displayField="nombre"
+                  />
+                </ContainerSelector>
+
+                <ContainerSelector>
+                  <label>Proveedor Asignado </label>
+                  <SelectList
+                    data={dataclipro || []}
+                    itemSelect={cliproItemSelect}
+                    onSelect={selectCliPro}
+                    displayField="nombres" 
+                  />
+                </ContainerSelector>
+
+                <article style={{ marginTop: "10px" }}>
+                  <InputText icono={<v.iconoflechaderecha />}>
+                    <input
+                      className="form__field"
+                      type="text"
+                      placeholder="Notas o descripción"
+                      {...register("descripcion", { required: true })}
+                    />
+                    <label className="form__label">Notas / Descripción</label>
+                    {errors.descripcion && <p className="error">Requerido</p>}
+                  </InputText>
+                </article>
+              </div>
+            </section>
+
+            {/* PANEL DE PRODUCTOS / DETALLE */}
+            <section className="seccion2 card-panel">
+              <h2>Productos del Pedido</h2>
+              <DetailBox>
+                <div className="grilla-agregar">
+                  <div className="selector-prod">
+                    <SelectList
+                      data={dataProductos || []}
+                      itemSelect={productoSeleccionado}
+                      onSelect={handleSelectProducto}
+                      displayField="nombre"
+                    />
+                  </div>
                   <input
                     type="number"
                     step="0.01"
@@ -302,7 +288,7 @@ export function RegistrarPedidosCompra({
                     value={precioCompra}
                     onChange={(e) => setPrecioCompra(e.target.value)}
                   />
-                  <button type="button" className="btn-add" onClick={agregarAlDetalle}>
+                  <button type="button" className="btn-add" onClick={agregarAlDetalle} title="Agregar item">
                     <FaPlus />
                   </button>
                 </div>
@@ -312,26 +298,34 @@ export function RegistrarPedidosCompra({
                     <thead>
                       <tr>
                         <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Costo</th>
-                        <th>Subtotal</th>
-                        <th></th>
+                        <th style={{ textAlign: "center" }}>Cant.</th>
+                        <th style={{ textAlign: "right" }}>Costo U.</th>
+                        <th style={{ textAlign: "right" }}>Subtotal</th>
+                        <th style={{ width: "50px" }}></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {detallePedido.map((item, index) => (
-                        <tr key={index}>
-                          <td>{item.nombre}</td>
-                          <td>{item.cantidad}</td>
-                          <td>${Number(item.precio_compra).toFixed(2)}</td>
-                          <td>${Number(item.subtotal).toFixed(2)}</td>
-                          <td>
-                            <button type="button" className="btn-delete" onClick={() => eliminarFilaDetalle(item.id_producto)}>
-                              <FaTrash />
-                            </button>
+                      {detallePedido.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="tabla-vacia">
+                            No hay productos agregados a la lista todavía.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        detallePedido.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.nombre}</td>
+                            <td style={{ textAlign: "center" }}>{item.cantidad}</td>
+                            <td style={{ textAlign: "right" }}>${Number(item.precio_compra).toFixed(2)}</td>
+                            <td style={{ textAlign: "right", fontWeight: "600" }}>${Number(item.subtotal).toFixed(2)}</td>
+                            <td style={{ textAlign: "center" }}>
+                              <button type="button" className="btn-delete" onClick={() => eliminarFilaDetalle(item.id_producto)}>
+                                <FaTrash />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -353,6 +347,221 @@ export function RegistrarPedidosCompra({
   );
 }
 
-const Container = styled.div` transition: 0.5s; top: 0; left: 0; position: fixed; background-color: rgba(10, 9, 9, 0.5); display: flex; width: 100%; min-height: 100vh; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); .sub-contenedor { position: relative; background: ${({ theme }) => theme.bgtotal}; box-shadow: -10px 15px 30px rgba(10, 9, 9, 0.4); padding: 20px 36px; z-index: 100; width: 90%; max-width: 950px; height: calc(100vh - 40px); overflow-y: auto; border-radius: 8px; .headers { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; h1 { font-size: 24px; font-weight: 700; } } .formulario { display: grid; grid-template-columns: 1fr; gap: 20px; @media ${Device.tablet} { grid-template-columns: 1fr 1.2fr; } .seccion1, .seccion2 { gap: 20px; display: flex; flex-direction: column; } .footer-button { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: 10px; } } } `;
-const DetailBox = styled.div` border: 1px solid ${({ theme }) => theme.color2 || "#ccc"}; border-radius: 8px; padding: 15px; background-color: rgba(0, 0, 0, 0.02); h3 { font-size: 16px; margin-bottom: 12px; font-weight: 600; } .grilla-agregar { display: grid; grid-template-columns: 2fr 1fr 1fr 50px; gap: 8px; margin-bottom: 15px; input { padding: 8px; border-radius: 6px; border: 1px solid #ccc; outline: none; background: ${({ theme }) => theme.bgtotal}; color: ${({ theme }) => theme.text}; } .btn-add { background-color: ${() => v.colorPrincipal || "#3b82f6"}; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; &:hover { background-color: #2563eb; } } } .tabla-items-scroll { max-height: 220px; overflow-y: auto; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 6px; } .tabla-detalle { width: 100%; border-collapse: collapse; font-size: 0.9em; th, td { padding: 10px; text-align: left; border-bottom: 1px solid rgba(0, 0, 0, 0.05); } th { background: rgba(0, 0, 0, 0.04); font-weight: 600; } .btn-delete { background: transparent; color: #ef4444; border: none; cursor: pointer; &:hover { color: #dc2626; } } } .total-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ccc; font-size: 1.1em; strong { color: #10b981; font-size: 1.3em; } } `;
-const LoadingSpan = styled.span` font-size: 20px; font-weight: 600; color: white; `;
+// 💅 ESTILOS AMPLIADOS Y RE-DISEÑADOS (Cero compactos)
+const Container = styled.div`
+  transition: 0.3s ease-in-out;
+  top: 0;
+  left: 0;
+  position: fixed;
+  background-color: rgba(15, 23, 42, 0.4);
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+
+  .sub-contenedor {
+    position: relative;
+    background: ${({ theme }) => theme.bgtotal || "#ffffff"};
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 30px;
+    z-index: 100;
+    width: 95%;
+    max-width: 1100px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border-radius: 12px;
+
+    .headers {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      padding-bottom: 12px;
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: ${({ theme }) => theme.text};
+      }
+    }
+
+    .formulario {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 25px;
+      @media ${Device.tablet} {
+        grid-template-columns: 1fr 1.4fr;
+      }
+
+      .card-panel {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        h2 {
+          font-size: 15px;
+          font-weight: 600;
+          opacity: 0.8;
+          margin-bottom: 5px;
+          border-bottom: 2px solid ${() => v.colorPrincipal || "#3b82f6"};
+          width: fit-content;
+          padding-bottom: 4px;
+        }
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 18px; /* Le da aire vertical a los SelectLists */
+      }
+
+      .footer-button {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 15px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        padding-top: 15px;
+      }
+    }
+  }
+`;
+
+const DetailBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .grilla-agregar {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr 1fr 54px;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: end;
+
+    input {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.15);
+      outline: none;
+      background: ${({ theme }) => theme.bgtotal};
+      color: ${({ theme }) => theme.text};
+      font-size: 14px;
+      transition: 0.2s;
+      height: 42px;
+      &:focus {
+        border-color: ${() => v.colorPrincipal || "#3b82f6"};
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+    }
+
+    .btn-add {
+      background-color: ${() => v.colorPrincipal || "#3b82f6"};
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+      font-size: 16px;
+      transition: 0.2s;
+      &:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+      }
+    }
+  }
+
+  .tabla-items-scroll {
+    min-height: 200px;
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.01);
+  }
+
+  .tabla-detalle {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    th {
+      background: rgba(0, 0, 0, 0.03);
+      font-weight: 600;
+      color: ${({ theme }) => theme.text};
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    tr:hover {
+      background: rgba(0,0,0,0.02);
+    }
+
+    .tabla-vacia {
+      text-align: center;
+      color: #94a3b8;
+      padding: 40px 0;
+      font-style: italic;
+    }
+
+    .btn-delete {
+      background: transparent;
+      color: #ef4444;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 6px;
+      &:hover {
+        color: #dc2626;
+        background: rgba(239, 68, 68, 0.08);
+      }
+    }
+  }
+
+  .total-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 2px dashed rgba(0,0,0,0.1);
+    font-size: 15px;
+    font-weight: 600;
+    strong {
+      color: #10b981;
+      font-size: 24px;
+      font-weight: 700;
+    }
+  }
+`;
+
+const LoadingSpan = styled.span`
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  animation: pulse 1.5s infinite;
+`;

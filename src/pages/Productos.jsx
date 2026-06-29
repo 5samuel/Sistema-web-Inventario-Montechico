@@ -28,11 +28,12 @@ export function Productos() {
     refetchOnWindowFocus: false,
   });
   
-  // Buscar categorías
+  // Buscar productos (CORREGIDO)
   const { isLoading: isLoadingBuscarProductos } = useQuery({
     queryKey: ["buscar productos", buscador],
     queryFn: () => buscarProductos({ id_empresa: dataempresa?.id, buscador: buscador }),
-    enabled: !!dataempresa,
+    // ◄ SOLUCIÓN: Solo se activa si hay empresa Y además el buscador tiene texto escrito
+    enabled: !!dataempresa && buscador.trim() !== "", 
     refetchOnWindowFocus: false,
   });
   

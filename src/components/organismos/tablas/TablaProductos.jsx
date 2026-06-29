@@ -17,18 +17,20 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { FaArrowsAltV } from "react-icons/fa";
+
 export function TablaProductos({
   data,
   SetopenRegistro,
   setdataSelect,
   setAccion,
 }) {
-  if (data == null) return;
+  if (data == null) return null;
   const [pagina, setPagina] = useState(1);
   const [datas, setData] = useState(data);
   const [columnFilters, setColumnFilters] = useState([]);
 
   const { eliminarProductos } = useProductosStore();
+
   function eliminar(p) {
     if (p.nombre === "General") {
       Swal.fire({
@@ -53,20 +55,21 @@ export function TablaProductos({
       }
     });
   }
+
   function editar(data) {
-  
     SetopenRegistro(true);
     setdataSelect(data);
     setAccion("Editar");
   }
+
   const columns = [
     {
       accessorKey: "nombre",
       header: "Descripcion",
       cell: (info) => (
-        <td data-title="DESCRIPCION" className="ContentCell">
+        <div className="ContentCell">
           <span>{info.getValue()}</span>
-        </td>
+        </div>
       ),
       enableColumnFilter: true,
       filterFn: (row, columnId, filterStatuses) => {
@@ -79,69 +82,71 @@ export function TablaProductos({
       accessorKey: "p_venta",
       header: "P. venta",
       cell: (info) => (
-        <td data-title="P. venta" className="ContentCell">
+        <div className="ContentCell">
           <span>{info.getValue()}</span>
-        </td>
+        </div>
       ),
       enableColumnFilter: true,
-      filterFn: (row, columnId, filterStatuses) => {
-        if (filterStatuses.length === 0) return true;
-        const status = row.getValue(columnId);
-        return filterStatuses.includes(status?.id);
-      },
     },
     {
       accessorKey: "p_compra",
       header: "P. compra",
       cell: (info) => (
-        <td data-title="P. compra" className="ContentCell">
+        <div className="ContentCell">
           <span>{info.getValue()}</span>
-        </td>
+        </div>
       ),
       enableColumnFilter: true,
-      filterFn: (row, columnId, filterStatuses) => {
-        if (filterStatuses.length === 0) return true;
-        const status = row.getValue(columnId);
-        return filterStatuses.includes(status?.id);
-      },
     },
     {
       accessorKey: "sevende_por",
       header: "Se vende por",
       cell: (info) => (
-        <td data-title="Se vende por" className="ContentCell">
+        <div className="ContentCell">
           <span>{info.getValue()}</span>
-        </td>
+        </div>
       ),
       enableColumnFilter: true,
-      filterFn: (row, columnId, filterStatuses) => {
-        if (filterStatuses.length === 0) return true;
-        const status = row.getValue(columnId);
-        return filterStatuses.includes(status?.id);
-      },
     },
     {
       accessorKey: "maneja_inventarios",
       header: "Inventarios",
       cell: (info) => (
-        <td data-title="Inventarios" className="ContentCell">
-          <Checkbox1 isChecked={info.getValue()}/>
-        </td>
+        <div className="ContentCell">
+          <Checkbox1 isChecked={info.getValue()} readOnly />
+        </div>
       ),
       enableColumnFilter: true,
-      filterFn: (row, columnId, filterStatuses) => {
-        if (filterStatuses.length === 0) return true;
-        const status = row.getValue(columnId);
-        return filterStatuses.includes(status?.id);
-      },
     },
+    {
+      accessorKey: "stock", 
+      header: "Stock",
+      cell: (info) => {
+        // 1. Obtenemos el valor directo de la celda. Si viene nulo o indefinido durante 
+        // el cambio de tema, le asignamos un 0 por defecto para que nunca se quede en blanco.
+        const valorStock = info.getValue() ?? 0;
+        const stockActual = Number(valorStock);
 
+        return (
+          <div className="ContentCell">
+            {/* Forzamos los colores de texto con Tailwind para modo claro (text-slate-900) 
+                y modo oscuro (dark:text-white) asegurando visibilidad total */}
+            <StockBadge stock={stockActual}>
+              <span className="text-slate-900 dark:text-white font-semibold">
+                {stockActual} u.
+              </span>
+            </StockBadge>
+          </div>
+        );
+      },
+      enableColumnFilter: true,
+    },
     {
       accessorKey: "acciones",
       header: "",
       enableSorting: false,
       cell: (info) => (
-        <div data-title="Acciones" className="ContentCell">
+        <div className="ContentCell">
           <ContentAccionesTabla
             funcionEditar={() => editar(info.row.original)}
             funcionEliminar={() => eliminar(info.row.original)}
@@ -149,13 +154,9 @@ export function TablaProductos({
         </div>
       ),
       enableColumnFilter: true,
-      filterFn: (row, columnId, filterStatuses) => {
-        if (filterStatuses.length === 0) return true;
-        const status = row.getValue(columnId);
-        return filterStatuses.includes(status?.id);
-      },
     },
   ];
+
   const table = useReactTable({
     data,
     columns,
@@ -181,6 +182,7 @@ export function TablaProductos({
         ),
     },
   });
+
   return (
     <>
       <Container>
@@ -221,7 +223,7 @@ export function TablaProductos({
             {table.getRowModel().rows.map((item) => (
               <tr key={item.id}>
                 {item.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
+                  <td key={cell.id} data-title={cell.column.columnDef.header?.toString().toUpperCase()}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -240,16 +242,29 @@ export function TablaProductos({
     </>
   );
 }
+
+// --- COMPONENTES ESTILIZADOS NUEVOS Y CORREGIDOS ---
+
+const StockBadge = styled.span`
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  display: inline-block;
+  background-color: ${({ stock }) => stock <= 0 ? "rgba(239, 68, 68, 0.12)" : "rgba(16, 185, 129, 0.12)"};
+  color: ${({ stock }) => stock <= 0 ? "#ef4444" : "#10b981"};
+  border: 1px solid ${({ stock }) => stock <= 0 ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)"};
+`;
+
 const Container = styled.div`
   position: relative;
-
   margin: 5% 3%;
   @media (min-width: ${v.bpbart}) {
     margin: 2%;
   }
   @media (min-width: ${v.bphomer}) {
     margin: 2em auto;
-    /* max-width: ${v.bphomer}; */
   }
   .responsive-table {
     width: 100%;
@@ -263,13 +278,11 @@ const Container = styled.div`
     }
     thead {
       position: absolute;
-
       padding: 0;
       border: 0;
       height: 1px;
       width: 1px;
       overflow: hidden;
-
       @media (min-width: ${v.bpbart}) {
         position: relative;
         height: auto;
@@ -300,7 +313,6 @@ const Container = styled.div`
         display: table-row;
       }
     }
-
     th,
     td {
       padding: 0.5em;
@@ -335,20 +347,6 @@ const Container = styled.div`
         &:last-of-type {
           margin-bottom: 0;
         }
-        &:nth-of-type(even) {
-          @media (min-width: ${v.bpbart}) {
-          }
-        }
-      }
-      th[scope="row"] {
-        @media (min-width: ${v.bplisa}) {
-          border-bottom: 1px solid rgba(161, 161, 161, 0.32);
-        }
-        @media (min-width: ${v.bpbart}) {
-          background-color: transparent;
-          text-align: center;
-          color: ${({ theme }) => theme.text};
-        }
       }
       .ContentCell {
         text-align: right;
@@ -356,8 +354,6 @@ const Container = styled.div`
         justify-content: space-between;
         align-items: center;
         height: 50px;
-        
-
         border-bottom: 1px solid rgba(161, 161, 161, 0.32);
         @media (min-width: ${v.bpbart}) {
           justify-content: center;
@@ -367,7 +363,6 @@ const Container = styled.div`
       td {
         text-align: right;
         @media (min-width: ${v.bpbart}) {
-          /* border-bottom: 1px solid rgba(161, 161, 161, 0.32); */
           text-align: center;
         }
       }
@@ -375,7 +370,7 @@ const Container = styled.div`
         content: attr(data-title);
         float: left;
         font-size: 0.8em;
-        font-weight:700;
+        font-weight: 700;
         @media (min-width: ${v.bplisa}) {
           font-size: 0.9em;
         }

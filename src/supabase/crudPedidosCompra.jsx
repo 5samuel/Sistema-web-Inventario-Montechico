@@ -23,14 +23,31 @@ export async function InsertarPedidosCompra(p) {
 }
 
 // 2. Mostrar Pedidos de Compra
+// 📁 Ubicación: src/supabase/crudPedidosCompra.jsx
 export async function MostrarPedidosCompra(p) {
-  const { data, error } = await supabase.rpc("mostrarpedidoscompra", {
-    _id_empresa: p.id_empresa,
-  });
+  const { data, error } = await supabase
+    .from("pedidos_compra")
+    .select(`
+      *,
+      observacion,
+      clientes_proveedores (
+        nombres
+      ),
+      detalle_pedido_compra (
+        id,
+        cantidad,
+        precio_compra,
+        id_producto,
+        total,
+        productos (
+          id,
+          nombre
+        )
+      )
+    `)
+    .eq("id_empresa", p.id_empresa);
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return data;
 }
 
