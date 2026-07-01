@@ -195,16 +195,7 @@ export function MyRoutes() {
           </Layout>
         }
       />
-      <Route
-        path="/"
-        element={
-          <Layout>
-            <ProtectedRoute accessBy="authenticated">
-              <Home />
-            </ProtectedRoute>
-          </Layout>
-        }
-      />
+      
       <Route
         path="/dashboard"
         element={

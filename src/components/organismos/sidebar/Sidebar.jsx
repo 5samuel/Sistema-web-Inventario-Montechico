@@ -28,7 +28,7 @@ export function Sidebar({ state, setState }) {
           <div className="imgcontent">
             <img src={v.logo} />
           </div>
-          <h2>Ada369 WEB</h2>
+          <h2>Montechico farms</h2>
         </div>
         {LinksArray.map(({ icon, label, to }) => (
           <div
@@ -121,7 +121,7 @@ const Container = styled.div`
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 30px;
+      width: 120px;
       cursor: pointer;
       transition: 0.3s ease;
       transform: ${({ $isopen }) =>
@@ -133,7 +133,7 @@ const Container = styled.div`
       }
     }
     h2 {
-      color: #f88533;
+      color: #6AB649;
       display: ${({ $isopen }) => ($isopen === "true" ? `block` : `none`)};
     }
   }

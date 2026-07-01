@@ -25,6 +25,15 @@ export const ReportInventarios = () => {
       0
     ) || 0;
 
+
+//// Calcular el valor total del inventario
+    const totalValorInventario =
+  dataReporteInventarioValorado?.reduce(
+    (acc, item) => acc + Number(item.total || 0),
+    0
+  ) || 0;
+
+
   const currentDate = new Date();
   const formattedDate = `${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
 
@@ -224,11 +233,27 @@ export const ReportInventarios = () => {
                     renderTableRow(item, index)
                   )}
                   <View style={styles.row}>
-                    <Text style={styles.totalLabelCell}>TOTAL</Text>
-                    <Text style={styles.numberCell}>
-                      {totalStock.toFixed(2)}{" "}
-                    </Text>
-                  </View>
+  {/* Código */}
+  <Text style={styles.codeCell}></Text>
+
+  {/* Descripción */}
+  <Text style={styles.descriptionCell}>
+    <Text style={{ fontWeight: "bold" }}>TOTAL GENERAL</Text>
+  </Text>
+
+  {/* Stock */}
+  <Text style={styles.numberCell}>
+    {totalStock.toFixed(2)}
+  </Text>
+
+  {/* Precio costo */}
+  <Text style={styles.numberCell}></Text>
+
+  {/* Total valorizado */}
+  <Text style={styles.numberCell}>
+    {totalValorInventario.toFixed(2)}
+  </Text>
+</View>
                 </View>
               </View>
             </View>
