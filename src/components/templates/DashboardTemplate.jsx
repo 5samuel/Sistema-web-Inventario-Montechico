@@ -6,6 +6,8 @@ import { ChartVentas } from "../organismos/DashboardDesign/ChartVentas";
 import {ChartProductosTop5} from "../organismos/DashboardDesign/ChartProductosTop5"
 import { CardMovimientosCajaLive } from "../organismos/DashboardDesign/CardMovimientosCajaLive";
 import {CardProductosTopMonto} from "../organismos/DashboardDesign/CardProductosTopMonto"
+import {CardMovimientoProducto} from"../organismos/DashboardDesign/CardMovimientoProducto";
+import { CardPedidosCompraLive } from "../organismos/DashboardDesign/CardPedidosCompraLive";
 import { useReportesStore } from "../../store/ReportesStore";
 
 export const DashboardTemplate = () => {
@@ -58,8 +60,11 @@ export const DashboardTemplate = () => {
         <ChartProductosTop5/>
         </Area3>
         <Area4>
-        <CardMovimientosCajaLive/>
+        <CardMovimientoProducto/>
+        {/* <CardMovimientosCajaLive/>*/}
+        <CardPedidosCompraLive/>
         <CardProductosTopMonto/>
+        
         </Area4>
       </MainContent> 
     </Container>

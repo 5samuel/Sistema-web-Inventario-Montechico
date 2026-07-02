@@ -1,6 +1,13 @@
 import { create } from "zustand";
-import { BuscarPedidosCompra, EditarPedidosCompra, EliminarPedidosCompra, InsertarPedidosCompra, MostrarPedidosCompra, RecibirPedidoCompra } from "../supabase/crudPedidosCompra";
-
+import {
+  BuscarPedidosCompra,
+  EditarPedidosCompra,
+  EliminarPedidosCompra,
+  InsertarPedidosCompra,
+  MostrarPedidosCompra,
+  RecibirPedidoCompra
+} from "../supabase/crudPedidosCompra";
+import { supabase } from "../supabase/supabase.config";
 export const usePedidosCompraStore = create((set, get) => ({
   refetchs: null,
   buscador: "",
@@ -53,6 +60,20 @@ export const usePedidosCompraStore = create((set, get) => ({
     await mostrarPedidosCompra(parametros);
   },
 
+  //  Enviar Pedido
+enviarPedidoCompra: async (p) => {
+  await EnviarPedidoCompra(p);
+  const { mostrarPedidosCompra, parametros } = get();
+  await mostrarPedidosCompra(parametros);
+},
+
+// 8. Cancelar Pedido
+cancelarPedidoCompra: async (p) => {
+  await CancelarPedidoCompra(p);
+  const { mostrarPedidosCompra, parametros } = get();
+  await mostrarPedidosCompra(parametros);
+},
+
   // 7. Buscar Pedidos
   buscarPedidosCompra: async (p) => {
     const response = await BuscarPedidosCompra(p);
@@ -65,5 +86,21 @@ export const usePedidosCompraStore = create((set, get) => ({
     await RecibirPedidoCompra(p);
     const { mostrarPedidosCompra, parametros } = get();
     await mostrarPedidosCompra(parametros);
-  }
+  },
+
+
+
+  mostrarPedidosLive: async (params) => {
+    try {
+      const { data, error } = await supabase.rpc("mostrarpedidoslive", params);
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error en mostrarPedidosLive:", error);
+      return []; // Retorna array vacío para que el .map no falle
+    }
+  },
+
+
+
 }));

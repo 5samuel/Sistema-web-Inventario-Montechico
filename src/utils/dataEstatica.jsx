@@ -46,6 +46,13 @@ export const LinksArray = [
     icon: "flat-ui:box",
     to: "/inventario",
   },
+
+  {
+  label: "Transferencias",
+  icon: "flat-ui:box",
+  to: "/transferencias",
+},
+
   {
     label: "Reportes",
     icon: "flat-ui:graph",

@@ -28,23 +28,26 @@ export async function MostrarPedidosCompra(p) {
   const { data, error } = await supabase
     .from("pedidos_compra")
     .select(`
-      *,
-      observacion,
-      clientes_proveedores (
-        nombres
-      ),
-      detalle_pedido_compra (
-        id,
-        cantidad,
-        precio_compra,
-        id_producto,
-        total,
-        productos (
-          id,
-          nombre
-        )
-      )
-    `)
+  *,
+  observacion,
+  clientes_proveedores (
+    nombres
+  ),
+  detalle_pedido_compra (
+    id,
+    cantidad,
+    cantidad_recibida,
+    estado,
+    precio_compra,
+    precio_venta,
+    id_producto,
+    total,
+    productos (
+      id,
+      nombre
+    )
+  )
+`)
     .eq("id_empresa", p.id_empresa);
 
   if (error) throw new Error(error.message);
@@ -91,14 +94,67 @@ export async function EliminarPedidosCompra(p) {
 
 // 6. Recibir Pedido (Soporta p.id y p.id_pedido enviado desde la tabla)
 export async function RecibirPedidoCompra(p) {
-  const idPedido = p.id_pedido || p.id;
-  const { error } = await supabase.rpc("recibirpedidocompra", {
-    _id_pedido: idPedido,
-  });
 
-  if (error) {
+  const { error } = await supabase.rpc(
+    "recibirpedidocompra",
+    {
+
+      _id_pedido: p.id_pedido,
+
+      _detalle: p.detalle,
+
+      _id_usuario: p.id_usuario
+
+    }
+  );
+
+  if (error)
     throw new Error(error.message);
-  }
+
+}
+
+
+export async function EnviarPedidoCompra(p) {
+
+  const { error } = await supabase.rpc(
+    "enviarpedidocompra",
+    {
+
+      _id_pedido: p.id
+
+    }
+  );
+
+  if (error)
+    throw new Error(error.message);
+
+}
+
+export async function CancelarPedidoCompra(p) {
+
+  const { error } = await supabase.rpc(
+    "cancelarpedidocompra",
+    {
+
+      _id_pedido: p.id
+
+    }
+  );
+
+  if (error)
+    throw new Error(error.message);
+
+}
+
+export async function MostrarPedidosLive(p){
+
+const {data,error}=await supabase.rpc("mostrarpedidoslive",p);
+
+if(error)
+throw error;
+
+return data;
+
 }
 
 // ==========================================
@@ -111,3 +167,5 @@ export const insertarPedidosCompra = InsertarPedidosCompra;
 export const editarPedidosCompra = EditarPedidosCompra;
 export const eliminarPedidosCompra = EliminarPedidosCompra;
 export const recibirPedidoCompra = RecibirPedidoCompra;
+export const enviarPedidoCompra = EnviarPedidoCompra;
+export const cancelarPedidoCompra = CancelarPedidoCompra;

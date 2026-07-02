@@ -44,3 +44,14 @@ export async function Mostrartop10productosmasvendidosxmonto(p) {
   );
   return data;
 }
+
+export async function MostrarMayorMovimientoProducto(p) {
+  const { data, error } = await supabase.rpc(
+      "mostrarmayormovimientoproducto", p);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}

@@ -6,6 +6,7 @@ import {
   Mostrartop5productosmasvendidosxcantidad,
   Mostrartop10productosmasvendidosxmonto,
   EditarCantidadDetalleVenta,
+  MostrarMayorMovimientoProducto
 } from "../index";
 function calcularTotal(items) {
   return items.reduce(
@@ -40,4 +41,10 @@ export const useDetalleVentasStore = create((set, get) => ({
   editarCantidadDetalleVenta: async (p) => {
     await EditarCantidadDetalleVenta(p);
   },
+
+  mostrarMayorMovimientoProducto:async (p)=>{
+  const response =await MostrarMayorMovimientoProducto(p);
+  return response;
+
+},
 }));
