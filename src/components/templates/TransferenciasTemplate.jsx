@@ -1,181 +1,87 @@
 import styled from "styled-components";
+import { useState } from "react";
+import { Toaster } from "sonner";
 import {
-Btn1,
-Title,
-
-RegistrarTransferencia,
-useTransferenciasStore
-}
-from "../../index";
-import{TablaTransferencia} from "../organismos/tablas/TablaTransferencia";
-
+  Btn1,
+  TablaTransferencia,
+  RegistrarTransferencia,
+  Title,
+  useTransferenciasStore,
+} from "../../index";
 import { v } from "../../styles/variables";
 
-import { useState } from "react";
+export function TransferenciasTemplate() {
+  // Estado para el modal de registro
+  const [openRegistro, setOpenRegistro] = useState(false);
+  // Estados para controlar la acción (Nuevo/Editar) y los datos seleccionados
+  const [accion, setAccion] = useState("Nuevo");
+  const [dataSelect, setDataSelect] = useState(null);
 
-export function TransferenciasTemplate(){
+  // Obtenemos los datos desde el store
+  const { dataTransferencias } = useTransferenciasStore();
 
-const[
-openRegistro,
-SetopenRegistro
-]=useState(false);
+  // Función para abrir el modal de nuevo registro
+  function nuevoRegistro() {
+    setDataSelect(null);
+    setAccion("Nuevo");
+    setOpenRegistro(true);
+  }
 
-const[
-accion,
-setAccion
-]=useState("");
+  return (
+    <Container>
+      <Toaster richColors position="top-right" />
+      
+      {openRegistro && (
+        <RegistrarTransferencia
+          onClose={() => setOpenRegistro(false)}
+          dataSelect={dataSelect}
+          accion={accion}
+          state={openRegistro}
+        />
+      )}
 
-const[
-dataSelect,
-setdataSelect
-]=useState([]);
+      <section className="area1">
+        <Title>Transferencias de Almacén</Title>
+        <Btn1
+          funcion={nuevoRegistro}
+          bgcolor={v.colorPrincipal}
+          titulo="Nueva Transferencia"
+          icono={<v.iconoagregar />}
+        />
+      </section>
 
-const{
-data
-}
-=
-useTransferenciasStore();
-
-function nuevoRegistro(){
-
-SetopenRegistro(
-!openRegistro
-);
-
-setAccion(
-"Nuevo"
-);
-
-setdataSelect([]);
-
-}
-
-return(
-
-<Container>
-
-{
-
-openRegistro && (
-
-<RegistrarTransferencia
-
-onClose={
-()=>SetopenRegistro(false)
-}
-
-accion={
-accion
+      <section className="main">
+        <TablaTransferencia 
+          data={dataTransferencias}
+          SetopenRegistro={setOpenRegistro} 
+          setdataSelect={setDataSelect} 
+          setAccion={setAccion} 
+        />
+      </section>
+    </Container>
+  );
 }
 
-dataSelect={
-dataSelect
-}
-
-state={
-openRegistro
-}
-
-/>
-
-)
-
-}
-
-<section
-className="area1"
->
-
-<Title>
-Transferencias
-</Title>
-
-<Btn1
-
-funcion={
-nuevoRegistro
-}
-
-bgcolor={
-v.colorPrincipal
-}
-
-titulo="nuevo"
-
-icono={
-<v.iconoagregar/>
-}
-
-/>
-
-</section>
-
-<section
-className="main"
->
-
-<TablaTransferencia
-
-data={
-data
-}
-
-setAccion={
-setAccion
-}
-
-setdataSelect={
-setdataSelect
-}
-
-SetopenRegistro={
-SetopenRegistro
-}
-
-/>
-
-</section>
-
-</Container>
-
-);
-
-}
-
-const Container=styled.div`
-
-height:
-calc(
-100vh - 80px
-);
-
-margin-top:
-50px;
-
-padding:
-15px;
-
-display:
-grid;
-
-grid-template:
-
-"area1"
-60px
-
-"main"
-auto;
-
-.area1{
-
-display:flex;
-
-justify-content:end;
-
-align-items:center;
-
-gap:10px;
-
-}
-
+const Container = styled.div`
+  height: calc(100vh - 80px);
+  margin-top: 50px;
+  padding: 15px;
+  display: grid;
+  grid-template:
+    "area1" 60px
+    "main" auto;
+    
+  .area1 {
+    grid-area: area1;
+    display: flex;
+    justify-content: space-between; /* Ajustado para mejor distribución */
+    align-items: center;
+    gap: 15px;
+    padding-bottom: 10px;
+  }
+  
+  .main {
+    grid-area: main;
+    overflow-y: auto; /* Permite scroll si la tabla es muy larga */
+  }
 `;
