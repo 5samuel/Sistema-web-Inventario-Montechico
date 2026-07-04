@@ -299,394 +299,6 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src/supabase/esquema.sql">
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
-
-CREATE TABLE public.empresa (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL DEFAULT 'Generica'::text,
-  id_fiscal text DEFAULT '-'::text,
-  direccion_fiscal text DEFAULT '-'::text,
-  simbolo_moneda text DEFAULT '$'::text,
-  logo text DEFAULT '-'::text,
-  id_auth text NOT NULL DEFAULT ''::text UNIQUE,
-  id_usuario bigint,
-  iso text DEFAULT 'PE'::text,
-  pais text DEFAULT 'Peru'::text,
-  currency text DEFAULT 'PEN'::text,
-  impuesto text DEFAULT 'IGV'::text,
-  valor_impuesto numeric DEFAULT '18'::numeric,
-  nombre_moneda text DEFAULT '-'::text,
-  correo text DEFAULT ''::text,
-  pie_pagina_ticket text DEFAULT '-'::text,
-  CONSTRAINT empresa_pkey PRIMARY KEY (id),
-  CONSTRAINT empresa_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.ventas (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  fecha timestamp without time zone NOT NULL DEFAULT now(),
-  monto_total numeric DEFAULT '0'::numeric,
-  total_impuestos numeric DEFAULT '0'::numeric,
-  id_usuario bigint,
-  saldo numeric DEFAULT '0'::numeric,
-  pago_con numeric DEFAULT '0'::numeric,
-  referencia_tarjeta text DEFAULT '-'::text,
-  vuelto numeric DEFAULT '0'::numeric,
-  cantidad_productos bigint DEFAULT '0'::bigint,
-  sub_total numeric DEFAULT '0'::numeric,
-  id_cliente bigint,
-  id_sucursal bigint,
-  id_empresa bigint,
-  estado text DEFAULT 'pendiente'::text,
-  valor_impuesto numeric DEFAULT '0'::numeric,
-  id_cierre_caja bigint,
-  nro_comprobante text DEFAULT gen_random_uuid(),
-  CONSTRAINT ventas_pkey PRIMARY KEY (id),
-  CONSTRAINT public_ventas_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.clientes_proveedores(id),
-  CONSTRAINT ventas_id_cierre_caja_fkey FOREIGN KEY (id_cierre_caja) REFERENCES public.cierrecaja(id),
-  CONSTRAINT ventas_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.almacen (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_sucursal bigint NOT NULL,
-  fecha_creacion timestamp without time zone DEFAULT now(),
-  delete boolean DEFAULT true,
-  nombre text,
-  default boolean DEFAULT true,
-  CONSTRAINT almacen_pkey PRIMARY KEY (id),
-  CONSTRAINT almacen_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id)
-);
-CREATE TABLE public.asignacion_sucursal (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_sucursal bigint NOT NULL,
-  id_usuario bigint,
-  id_caja bigint,
-  CONSTRAINT asignacion_sucursal_pkey PRIMARY KEY (id),
-  CONSTRAINT asignacion_sucursal_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id),
-  CONSTRAINT asignacion_sucursal_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id),
-  CONSTRAINT asignacion_sucursal_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.caja (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  descripcion text NOT NULL,
-  id_sucursal bigint,
-  fecha_creacion timestamp without time zone DEFAULT now(),
-  delete boolean DEFAULT true,
-  print boolean DEFAULT false,
-  CONSTRAINT caja_pkey PRIMARY KEY (id),
-  CONSTRAINT caja_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id)
-);
-CREATE TABLE public.categorias (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL,
-  color text,
-  icono text DEFAULT '-'::text,
-  id_empresa bigint,
-  CONSTRAINT categorias_pkey PRIMARY KEY (id),
-  CONSTRAINT public_categorias_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.cierrecaja (
-  fechainicio timestamp without time zone DEFAULT now(),
-  fechacierre timestamp without time zone DEFAULT now(),
-  id_usuario integer,
-  total_efectivo_calculado numeric DEFAULT '0'::numeric,
-  total_efectivo_real numeric DEFAULT '0'::numeric,
-  estado bigint DEFAULT '0'::bigint,
-  diferencia_efectivo numeric DEFAULT '0'::numeric,
-  id_caja integer,
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  CONSTRAINT cierrecaja_pkey PRIMARY KEY (id),
-  CONSTRAINT cierrecaja_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id),
-  CONSTRAINT cierrecaja_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.clientes_proveedores (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombres text NOT NULL DEFAULT '-'::text,
-  id_empresa bigint,
-  direccion text DEFAULT '-'::text,
-  telefono text DEFAULT '-'::text,
-  email text DEFAULT '-'::text,
-  identificador_nacional text DEFAULT '-'::text,
-  identificador_fiscal text DEFAULT '-'::text,
-  tipo text DEFAULT '-'::text,
-  estado text DEFAULT 'activo'::text,
-  fecha_registro timestamp without time zone DEFAULT now(),
-  CONSTRAINT clientes_proveedores_pkey PRIMARY KEY (id),
-  CONSTRAINT public_clientes_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.detalle_venta (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_venta bigint NOT NULL,
-  cantidad numeric DEFAULT '1'::numeric,
-  precio_venta numeric,
-  total numeric,
-  descripcion text,
-  id_producto bigint,
-  precio_compra numeric,
-  id_sucursal bigint,
-  estado text DEFAULT 'nueva'::text,
-  id_almacen bigint,
-  CONSTRAINT detalle_venta_pkey PRIMARY KEY (id),
-  CONSTRAINT detalle_venta_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id),
-  CONSTRAINT public_detalle_venta_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id),
-  CONSTRAINT public_detalle_venta_id_venta_fkey FOREIGN KEY (id_venta) REFERENCES public.ventas(id)
-);
-CREATE TABLE public.impresoras (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_caja bigint NOT NULL,
-  pc_name text DEFAULT '-'::text,
-  ip_local text DEFAULT '-'::text,
-  state boolean DEFAULT false,
-  name text DEFAULT '-'::text,
-  CONSTRAINT impresoras_pkey PRIMARY KEY (id),
-  CONSTRAINT impresoras_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id)
-);
-CREATE TABLE public.kardex (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  fecha date NOT NULL,
-  motivo text,
-  cantidad numeric,
-  id_producto bigint,
-  id_usuario bigint,
-  tipo text,
-  estado text,
-  total numeric,
-  costo numeric,
-  habia numeric,
-  hay numeric,
-  CONSTRAINT kardex_pkey PRIMARY KEY (id),
-  CONSTRAINT public_kardex_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id),
-  CONSTRAINT public_kardex_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.metodos_pago (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL,
-  id_empresa bigint,
-  icono text DEFAULT '-'::text,
-  ver_nombre boolean DEFAULT true,
-  delete_update boolean DEFAULT false,
-  CONSTRAINT metodos_pago_pkey PRIMARY KEY (id),
-  CONSTRAINT metodos_pago_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.modulos (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL DEFAULT '-'::text,
-  check boolean DEFAULT false,
-  descripcion text DEFAULT '-'::text,
-  icono text DEFAULT '-'::text,
-  link text DEFAULT '-'::text,
-  etiquetas text DEFAULT '#configuracion'::text,
-  CONSTRAINT modulos_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.movimientos_caja (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  fecha_movimiento timestamp without time zone NOT NULL DEFAULT now(),
-  tipo_movimiento text,
-  monto numeric DEFAULT '0'::numeric,
-  id_metodo_pago bigint,
-  descripcion text DEFAULT '-'::text,
-  id_usuario bigint,
-  id_cierre_caja bigint,
-  id_ventas bigint,
-  vuelto numeric DEFAULT '0'::numeric,
-  CONSTRAINT movimientos_caja_pkey PRIMARY KEY (id),
-  CONSTRAINT movimientos_caja_id_cierre_caja_fkey FOREIGN KEY (id_cierre_caja) REFERENCES public.cierrecaja(id),
-  CONSTRAINT movimientos_caja_id_metodo_pago_fkey FOREIGN KEY (id_metodo_pago) REFERENCES public.metodos_pago(id),
-  CONSTRAINT movimientos_caja_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
-  CONSTRAINT movimientos_caja_id_ventas_fkey FOREIGN KEY (id_ventas) REFERENCES public.ventas(id)
-);
-CREATE TABLE public.movimientos_stock (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_almacen bigint NOT NULL,
-  id_producto bigint,
-  tipo_movimiento text,
-  cantidad numeric,
-  fecha timestamp with time zone DEFAULT now(),
-  detalle text DEFAULT '-'::text,
-  origen text DEFAULT '-'::text,
-  CONSTRAINT movimientos_stock_pkey PRIMARY KEY (id),
-  CONSTRAINT movimientos_stock_id_almacen_fkey FOREIGN KEY (id_almacen) REFERENCES public.almacen(id),
-  CONSTRAINT movimientos_stock_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
-);
-CREATE TABLE public.multiprecios (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  precio_venta numeric NOT NULL,
-  id_producto bigint,
-  cantidad numeric,
-  CONSTRAINT multiprecios_pkey PRIMARY KEY (id),
-  CONSTRAINT multiprecios_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
-);
-CREATE TABLE public.permisos (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_usuario bigint NOT NULL,
-  idmodulo bigint,
-  CONSTRAINT permisos_pkey PRIMARY KEY (id),
-  CONSTRAINT permisos_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
-  CONSTRAINT permisos_idmodulo_fkey FOREIGN KEY (idmodulo) REFERENCES public.modulos(id)
-);
-CREATE TABLE public.permisos_dafault (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_rol bigint NOT NULL,
-  id_modulo bigint,
-  CONSTRAINT permisos_dafault_pkey PRIMARY KEY (id),
-  CONSTRAINT permisos_dafault_id_modulo_fkey FOREIGN KEY (id_modulo) REFERENCES public.modulos(id),
-  CONSTRAINT permisos_dafault_id_rol_fkey FOREIGN KEY (id_rol) REFERENCES public.roles(id)
-);
-CREATE TABLE public.productos (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL,
-  precio_venta numeric DEFAULT '0'::numeric,
-  precio_compra numeric DEFAULT '0'::numeric,
-  id_categoria bigint,
-  codigo_barras text,
-  codigo_interno text,
-  id_empresa bigint,
-  sevende_por text DEFAULT 'unidad'::text,
-  maneja_inventarios boolean DEFAULT false,
-  maneja_multiprecios boolean DEFAULT false,
-  CONSTRAINT productos_pkey PRIMARY KEY (id),
-  CONSTRAINT public_productos_id_categoria_fkey FOREIGN KEY (id_categoria) REFERENCES public.categorias(id),
-  CONSTRAINT public_productos_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.roles (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL,
-  CONSTRAINT roles_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.serializacion_comprobantes (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_tipo_comprobante bigint NOT NULL,
-  serie text,
-  cantidad_numeros bigint,
-  correlativo bigint,
-  sucursal_id bigint,
-  por_default boolean DEFAULT false,
-  CONSTRAINT serializacion_comprobantes_pkey PRIMARY KEY (id),
-  CONSTRAINT serializacion_comprobantes_id_tipo_comprobante_fkey FOREIGN KEY (id_tipo_comprobante) REFERENCES public.tipo_comprobantes(id),
-  CONSTRAINT serializacion_comprobantes_sucursal_id_fkey FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id)
-);
-CREATE TABLE public.stock (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_almacen bigint NOT NULL,
-  id_producto bigint,
-  stock numeric DEFAULT '0'::numeric,
-  stock_minimo numeric DEFAULT '0'::numeric,
-  ubicacion text DEFAULT '-'::text,
-  CONSTRAINT stock_pkey PRIMARY KEY (id),
-  CONSTRAINT stock_id_almacen_fkey FOREIGN KEY (id_almacen) REFERENCES public.almacen(id),
-  CONSTRAINT stock_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
-);
-CREATE TABLE public.sucursales (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text,
-  direccion_fiscal text,
-  id_empresa bigint,
-  delete boolean DEFAULT true,
-  CONSTRAINT sucursales_pkey PRIMARY KEY (id),
-  CONSTRAINT sucursales_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.tipo_comprobantes (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL,
-  destino text,
-  CONSTRAINT tipo_comprobantes_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.tipodocumento (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre text NOT NULL DEFAULT ''::text,
-  id_empresa bigint,
-  CONSTRAINT tipodocumento_pkey PRIMARY KEY (id),
-  CONSTRAINT tipodocumento_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
-);
-CREATE TABLE public.usuarios (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombres text NOT NULL DEFAULT '-'::text,
-  id_tipodocumento bigint,
-  nro_doc text DEFAULT '-'::text,
-  telefono text DEFAULT '-'::text,
-  id_rol bigint,
-  correo text DEFAULT '-'::text,
-  fecharegistro date DEFAULT now(),
-  estado text DEFAULT 'ACTIVO'::text,
-  id_auth text UNIQUE,
-  tema text DEFAULT 'light'::text,
-  CONSTRAINT usuarios_pkey PRIMARY KEY (id),
-  CONSTRAINT usuarios_id_rol_fkey FOREIGN KEY (id_rol) REFERENCES public.roles(id)
-);
-CREATE TABLE public.pedidos_compra (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  fecha timestamp without time zone NOT NULL DEFAULT now(),
-  total numeric DEFAULT '0'::numeric,
-  id_proveedor bigint,
-  id_usuario bigint,
-  id_empresa bigint,
-  id_sucursal bigint,
-  id_almacen bigint,
-  observacion text DEFAULT '-'::text,
-  estado text DEFAULT 'BORRADOR'::text,
-  fecha_entrega timestamp without time zone,
-  fecha_recepcion timestamp without time zone,
-  usuario_creacion bigint,
-  usuario_recibe bigint,
-  CONSTRAINT pedidos_compra_pkey PRIMARY KEY (id),
-  CONSTRAINT pedidos_compra_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id),
-  CONSTRAINT pedidos_compra_id_proveedor_fkey FOREIGN KEY (id_proveedor) REFERENCES public.clientes_proveedores(id),
-  CONSTRAINT pedidos_compra_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
-);
-CREATE TABLE public.detalle_pedido_compra (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  id_pedido_compra bigint NOT NULL,
-  id_producto bigint NOT NULL,
-  cantidad numeric DEFAULT '1'::numeric,
-  precio_compra numeric DEFAULT '0'::numeric,
-  precio_venta numeric DEFAULT '0'::numeric,
-  total numeric DEFAULT '0'::numeric,
-  cantidad_recibida numeric DEFAULT 0,
-  estado text DEFAULT 'PENDIENTE'::text,
-  CONSTRAINT detalle_pedido_compra_pkey PRIMARY KEY (id),
-  CONSTRAINT detalle_pedido_compra_id_pedido_fkey FOREIGN KEY (id_pedido_compra) REFERENCES public.pedidos_compra(id),
-  CONSTRAINT detalle_pedido_compra_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
-);
-CREATE TABLE public.transferencias (
-  id_transferencia integer NOT NULL DEFAULT nextval('transferencias_id_transferencia_seq'::regclass),
-  fecha timestamp without time zone DEFAULT now(),
-  id_sucursal_origen integer,
-  id_sucursal_destino integer,
-  estado character varying,
-  observacion text,
-  usuario_creacion integer,
-  CONSTRAINT transferencias_pkey PRIMARY KEY (id_transferencia)
-);
-CREATE TABLE public.detalle_transferencia (
-  id_detalle integer NOT NULL DEFAULT nextval('detalle_transferencia_id_detalle_seq'::regclass),
-  id_transferencia integer,
-  id_producto integer,
-  cantidad numeric,
-  cantidad_recibida numeric DEFAULT 0,
-  CONSTRAINT detalle_transferencia_pkey PRIMARY KEY (id_detalle)
-);
-CREATE TABLE public.movimientos_inventario (
-  id_movimiento integer NOT NULL DEFAULT nextval('movimientos_inventario_id_movimiento_seq'::regclass),
-  fecha timestamp without time zone,
-  tipo character varying,
-  id_producto integer,
-  id_sucursal integer,
-  cantidad numeric,
-  CONSTRAINT movimientos_inventario_pkey PRIMARY KEY (id_movimiento)
-);
-CREATE TABLE public.transferencia_almacen (
-  id integer NOT NULL DEFAULT nextval('transferencia_almacen_id_seq'::regclass),
-  fecha timestamp without time zone DEFAULT now(),
-  id_almacen_origen integer NOT NULL,
-  id_almacen_destino integer NOT NULL,
-  estado character varying DEFAULT 'PENDIENTE'::character varying,
-  observacion text,
-  id_usuario integer,
-  CONSTRAINT transferencia_almacen_pkey PRIMARY KEY (id)
-);
-</file>
-
 <file path=".eslintrc.cjs">
 module.exports = {
   root: true,
@@ -5793,162 +5405,6 @@ const Container = styled.div`
       }
     }
   }
-`;
-</file>
-
-<file path="src/components/organismos/formularios/RegistrarTransferencia.jsx">
-import styled from "styled-components";
-import { useState, useEffect } from "react";
-import { v } from "../../../styles/variables";
-import {
-  InputText,
-  Btn1,
-  useTransferenciasStore,
-  useAlmacenesStore,
-  useProductosStore,
-  useEmpresaStore,
-} from "../../../index";
-import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { BtnClose } from "../../ui/buttons/BtnClose";
-import { SelectList } from "../../ui/lists/SelectList";
-import { ContainerSelector } from "../../atomos/ContainerSelector";
-
-export function RegistrarTransferencia({ onClose, state }) {
-  if (!state) return null;
-
-  // Stores
-  const { insertarTransferencia, agregarDetalle } = useTransferenciasStore();
-  const { dataAlmacenesXsucursal, mostrarAlmacenesXSucursal } = useAlmacenesStore();
-  const { dataProductos, mostrarProductos } = useProductosStore();
-  const { dataempresa } = useEmpresaStore();
-
-  const queryClient = useQueryClient();
-  const { register, handleSubmit } = useForm();
-
-  // Estados locales para la lógica de transferencia
-  const [origen, setOrigen] = useState(null);
-  const [destino, setDestino] = useState(null);
-  const [listaDetalle, setListaDetalle] = useState([]);
-  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [cantidad, setCantidad] = useState("");
-
-  // Carga inicial
-  useEffect(() => {
-    if (state && dataempresa?.id) {
-      // Cambia el 1 por el 3 (o el ID que corresponda a tu sucursal actual)
-      mostrarAlmacenesXSucursal({ id_sucursal: 3 }); 
-      mostrarProductos({ id_empresa: dataempresa.id }); 
-    }
-  }, [state, dataempresa]);
-
-  // Función para agregar producto a la lista temporal
-  const agregarAlDetalle = () => {
-    if (!productoSeleccionado) return toast.error("Seleccione un producto");
-    if (!cantidad || cantidad <= 0) return toast.error("Ingrese una cantidad válida");
-    
-    // Evitar duplicados en la lista (opcional, puedes quitarlo si quieres sumar)
-    const existe = listaDetalle.find((item) => item.id === productoSeleccionado.id);
-    if (existe) return toast.error("El producto ya está en la lista");
-
-    setListaDetalle([...listaDetalle, { ...productoSeleccionado, cantidad }]);
-    setProductoSeleccionado(null);
-    setCantidad("");
-  };
-
-  // Mutación para guardar todo el proceso
-  const { mutate: doInsertar, isPending } = useMutation({
-    mutationFn: async (datosCabecera) => {
-      const idTransferencia = await insertarTransferencia(datosCabecera);
-      for (const item of listaDetalle) {
-        await agregarDetalle({
-          p_transferencia: idTransferencia,
-          p_producto: item.id,
-          p_cantidad: item.cantidad
-        });
-      }
-      return idTransferencia;
-    },
-    onSuccess: () => {
-      toast.success("Transferencia creada con éxito");
-      queryClient.invalidateQueries(["mostrar transferencias"]);
-      onClose();
-    },
-    onError: (e) => toast.error(`Error: ${e.message}`)
-  });
-
-  const onSubmit = (data) => {
-    if (!origen || !destino) return toast.error("Seleccione almacenes");
-    if (listaDetalle.length === 0) return toast.error("Agregue productos");
-    if (origen.id === destino.id) return toast.error("Almacenes deben ser diferentes");
-
-    doInsertar({
-      p_origen: origen.id,
-      p_destino: destino.id,
-      p_observacion: data.observacion || "-",
-      p_usuario: 1 
-    });
-  };
-console.log("Datos de almacenes recibidos:", dataAlmacenesXsucursal);
-  return (
-    <Container>
-      <div className="sub-contenedor">
-        <div className="headers">
-          <h1>NUEVA TRANSFERENCIA</h1>
-          <BtnClose funcion={onClose} />
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="formulario">
-          <section className="seccion-cabecera">
-            <ContainerSelector>
-              <label>Origen:</label>
-              <SelectList data={dataAlmacenesXsucursal || []} itemSelect={origen} onSelect={setOrigen} displayField="nombre" />
-            </ContainerSelector>
-            <ContainerSelector>
-              <label>Destino:</label>
-              <SelectList data={dataAlmacenesXsucursal || []} itemSelect={destino} onSelect={setDestino} displayField="nombre" />
-            </ContainerSelector>
-          </section>
-
-          <section className="seccion-detalle">
-            <div className="grupo-agregar">
-              <SelectList data={dataProductos || []} itemSelect={productoSeleccionado} onSelect={setProductoSeleccionado} displayField="nombre" />
-              <input type="number" value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="Cant" />
-              <button type="button" onClick={agregarAlDetalle}>+</button>
-            </div>
-            
-            <div className="lista-items">
-              {listaDetalle.map((p, i) => (
-                <div key={i} className="item">
-                  <span>{p.nombre}</span>
-                  <b>{p.cantidad} und.</b>
-                  <button type="button" onClick={() => setListaDetalle(listaDetalle.filter((_, index) => index !== i))}>X</button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <InputText>
-            <input {...register("observacion")} placeholder="Observación..." />
-          </InputText>
-
-          <Btn1 titulo={isPending ? "Guardando..." : "Finalizar Transferencia"} bgcolor={v.colorPrincipal} disabled={isPending} />
-        </form>
-      </div>
-    </Container>
-  );
-}
-
-const Container = styled.div`
-  /* Estilos fijos para que el modal se vea bien */
-  position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-  background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;
-  .sub-contenedor { background: white; padding: 25px; border-radius: 10px; width: 500px; }
-  .formulario { display: flex; flex-direction: column; gap: 15px; }
-  .grupo-agregar { display: flex; gap: 5px; align-items: center; }
-  .lista-items { border: 1px solid #ddd; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; }
-  .item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #eee; }
 `;
 </file>
 
@@ -14101,146 +13557,6 @@ const Colorcontent = styled.div`
 `;
 </file>
 
-<file path="src/components/organismos/tablas/TablaTransferencia.jsx">
-import styled from "styled-components";
-import { useState } from "react";
-import {
-  ContentAccionesTabla,
-  Paginacion,
-  useTransferenciasStore,
-} from "../../../index";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import { FaArrowsAltV } from "react-icons/fa";
-
-export function TablaTransferencia({ data, SetopenRegistro, setdataSelect, setAccion }) {
-  // Obtenemos las funciones del store
-  const { enviarTransferencia, recibirTransferencia } = useTransferenciasStore();
-  
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-
-  const columns = [
-    { accessorKey: "id", header: "ID" },
-    { 
-      accessorKey: "fecha", 
-      header: "Fecha",
-      cell: (info) => <span>{new Date(info.getValue()).toLocaleDateString()}</span> 
-    },
-    { accessorKey: "origen", header: "Origen" },
-    { accessorKey: "destino", header: "Destino" },
-    { accessorKey: "estado", header: "Estado" },
-    {
-      header: "Acciones",
-      cell: (info) => {
-        const item = info.row.original;
-        return (
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-            {/* Botón ENVIAR: Solo aparece si está PENDIENTE */}
-            {item.estado === "PENDIENTE" && (
-              <button 
-                onClick={() => enviarTransferencia(item.id)}
-                style={{ background: "#3498db", color: "white", padding: "5px 10px", borderRadius: "4px", border: "none" }}
-              >
-                Enviar
-              </button>
-            )}
-            
-            {/* Botón RECIBIR: Solo aparece si está EN_TRANSITO */}
-            {item.estado === "EN_TRANSITO" && (
-              <button 
-                onClick={() => recibirTransferencia(item.id)}
-                style={{ background: "#27ae60", color: "white", padding: "5px 10px", borderRadius: "4px", border: "none" }}
-              >
-                Recibir
-              </button>
-            )}
-
-            <ContentAccionesTabla
-              editar={() => {
-                setAccion("Editar");
-                setdataSelect(item);
-                SetopenRegistro(true);
-              }}
-              eliminar={() => console.log("Eliminar", item.id)}
-            />
-          </div>
-        );
-      },
-    },
-  ];
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { pagination },
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  return (
-    <Container>
-      <table className="responsive-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                  <span style={{ cursor: "pointer", marginLeft: "5px" }} onClick={header.column.getToggleSortingHandler()}>
-                    <FaArrowsAltV />
-                  </span>
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((item) => (
-            <tr key={item.id}>
-              {item.getVisibleCells().map((cell) => (
-                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <Paginacion
-        table={table}
-        irinicio={() => table.setPageIndex(0)}
-        pagina={table.getState().pagination.pageIndex + 1}
-        maximo={table.getPageCount()}
-      />
-    </Container>
-  );
-}
-
-const Container = styled.div`
-  position: relative;
-  .responsive-table {
-    width: 100%;
-    border-spacing: 0;
-    thead th {
-      border-bottom: 2px solid ${({ theme }) => theme.color2};
-      padding: 10px;
-    }
-    tbody td {
-      text-align: center;
-      padding: 10px;
-      border-bottom: 1px solid rgba(161, 161, 161, 0.2);
-    }
-  }
-`;
-</file>
-
 <file path="src/components/organismos/tablas/TablaUsuarios.jsx">
 import styled from "styled-components";
 import {
@@ -16698,96 +16014,6 @@ const Subtitle = styled.p`
   font-size: 18px;
   color: #6b7280;
   margin: 5px 0 0;
-`;
-</file>
-
-<file path="src/components/templates/TransferenciasTemplate.jsx">
-import styled from "styled-components";
-import { useState } from "react";
-import { Toaster } from "sonner";
-import {
-  Btn1,
-  TablaTransferencia,
-  RegistrarTransferencia,
-  Title,
-  useTransferenciasStore,
-} from "../../index";
-import { v } from "../../styles/variables";
-
-export function TransferenciasTemplate() {
-  // Estado para el modal de registro
-  const [openRegistro, setOpenRegistro] = useState(false);
-  // Estados para controlar la acción (Nuevo/Editar) y los datos seleccionados
-  const [accion, setAccion] = useState("Nuevo");
-  const [dataSelect, setDataSelect] = useState(null);
-
-  // Obtenemos los datos desde el store
-  const { dataTransferencias } = useTransferenciasStore();
-
-  // Función para abrir el modal de nuevo registro
-  function nuevoRegistro() {
-    setDataSelect(null);
-    setAccion("Nuevo");
-    setOpenRegistro(true);
-  }
-
-  return (
-    <Container>
-      <Toaster richColors position="top-right" />
-      
-      {openRegistro && (
-        <RegistrarTransferencia
-          onClose={() => setOpenRegistro(false)}
-          dataSelect={dataSelect}
-          accion={accion}
-          state={openRegistro}
-        />
-      )}
-
-      <section className="area1">
-        <Title>Transferencias de Almacén</Title>
-        <Btn1
-          funcion={nuevoRegistro}
-          bgcolor={v.colorPrincipal}
-          titulo="Nueva Transferencia"
-          icono={<v.iconoagregar />}
-        />
-      </section>
-
-      <section className="main">
-        <TablaTransferencia 
-          data={dataTransferencias}
-          SetopenRegistro={setOpenRegistro} 
-          setdataSelect={setDataSelect} 
-          setAccion={setAccion} 
-        />
-      </section>
-    </Container>
-  );
-}
-
-const Container = styled.div`
-  height: calc(100vh - 80px);
-  margin-top: 50px;
-  padding: 15px;
-  display: grid;
-  grid-template:
-    "area1" 60px
-    "main" auto;
-    
-  .area1 {
-    grid-area: area1;
-    display: flex;
-    justify-content: space-between; /* Ajustado para mejor distribución */
-    align-items: center;
-    gap: 15px;
-    padding-bottom: 10px;
-  }
-  
-  .main {
-    grid-area: main;
-    overflow-y: auto; /* Permite scroll si la tabla es muy larga */
-  }
 `;
 </file>
 
@@ -20171,58 +19397,6 @@ export const SucursalesCaja = () => {
 };
 </file>
 
-<file path="src/pages/Transferencias.jsx">
-import { useQuery } from "@tanstack/react-query";
-import {
-  TransferenciasTemplate,
-  Spinner1,
-  useTransferenciasStore,
-  useAlmacenesStore,
-  useEmpresaStore,
-} from "../index";
-
-export function Transferencias() {
-  // 1. Estados globales del store
-  const { mostrarTransferencias } = useTransferenciasStore();
-  const { mostrarAlmacenes } = useAlmacenesStore();
-  const { dataempresa } = useEmpresaStore();
-
-  // 2. Consulta: Cargar listado de transferencias
-  // Al pasar dataempresa.id, garantizamos que siempre traiga lo de la empresa activa
-  const {
-    isLoading: isLoadingTransferencias,
-    error: errorTransferencias,
-    refetch: refetchTransferencias,
-  } = useQuery({
-    queryKey: ["mostrar transferencias", dataempresa?.id],
-    queryFn: () => mostrarTransferencias({ id_empresa: dataempresa?.id }),
-    enabled: !!dataempresa,
-    refetchOnWindowFocus: false,
-  });
-
-  // 3. Consulta: Cargar almacenes (para los selectores de origen/destino en el registro)
-  const { isLoading: isLoadingAlmacenes } = useQuery({
-    queryKey: ["mostrar almacenes", dataempresa?.id],
-    queryFn: () => mostrarAlmacenes({ id_empresa: dataempresa?.id }),
-    enabled: !!dataempresa,
-    refetchOnWindowFocus: false,
-  });
-
-  // Consolidación de estados de carga
-  const isLoading = isLoadingTransferencias || isLoadingAlmacenes;
-  
-  if (isLoading) {
-    return <Spinner1 />;
-  }
-
-  if (errorTransferencias) {
-    return <span>Error al cargar transferencias: {errorTransferencias.message}</span>;
-  }
-
-  return <TransferenciasTemplate />;
-}
-</file>
-
 <file path="src/pages/Usuarios.jsx">
 import { useQuery } from "@tanstack/react-query";
 import { UsuariosTemplate } from "../components/templates/UsuariosTemplate";
@@ -21975,71 +21149,6 @@ export const useThemeStore = create((set, get) => ({
 }));
 </file>
 
-<file path="src/store/TransferenciasStore.jsx">
-import { create } from "zustand";
-import {
-  MostrarTransferencias,
-  InsertarTransferencia,
-  AgregarDetalleTransferencia,
-  EnviarTransferencia,
-  RecibirTransferencia
-} from "../index";
-
-export const useTransferenciasStore = create((set, get) => ({
-  dataTransferencias: [],
-  transferenciaItemSelect: null,
-  parametros: {},
-  refetchs: null,
-
-  // 1. Mostrar todas las transferencias y guardar parámetros para refrescar
-  mostrarTransferencias: async (p) => {
-    const response = await MostrarTransferencias();
-    set({ 
-      dataTransferencias: response,
-      parametros: p || {},
-      refetchs: p?.refetchs || null
-    });
-    return response;
-  },
-
-  // 2. Selección de una transferencia (para detalles o edición)
-  selectTransferencia: (p) => {
-    set({ transferenciaItemSelect: p });
-  },
-
-  // 3. Insertar nueva transferencia y refrescar lista
-  insertarTransferencia: async (p) => {
-    const idTransferencia = await InsertarTransferencia(p);
-    const { mostrarTransferencias, parametros } = get();
-    await mostrarTransferencias(parametros);
-    return idTransferencia;
-  },
-
-  // 4. Agregar detalle a una transferencia existente
-  agregarDetalle: async (p) => {
-    await AgregarDetalleTransferencia(p);
-  },
-
-  // 5. Enviar transferencia (cambia estado a EN_TRANSITO y actualiza stock origen)
-  enviarTransferencia: async (id) => {
-    await EnviarTransferencia({ id });
-    const { mostrarTransferencias, parametros } = get();
-    await mostrarTransferencias(parametros);
-  },
-
-  // 6. Recibir transferencia (cambia estado a COMPLETADO y actualiza stock destino)
-  recibirTransferencia: async (id) => {
-    await RecibirTransferencia({ id });
-    const { mostrarTransferencias, parametros } = get();
-    await mostrarTransferencias(parametros);
-  },
-
-  resetTransferenciaItemSelect: () => {
-    set({ transferenciaItemSelect: null });
-  },
-}));
-</file>
-
 <file path="src/store/UsuariosStore.jsx">
 import { create } from "zustand";
 import {
@@ -23219,70 +22328,6 @@ export async function MostrarTipoDocumentos(p) {
 }
 </file>
 
-<file path="src/supabase/crudTransferencias.jsx">
-import { supabase } from "../index";
-
-// Nombre de la tabla principal
-const tabla = "transferencia_almacen";
-
-// 1. Crear la cabecera de la transferencia
-export async function InsertarTransferencia(p) {
-  const { error, data } = await supabase.rpc("crear_transferencia", {
-    p_origen: p.p_origen,
-    p_destino: p.p_destino,
-    p_observacion: p.p_observacion,
-    p_usuario: p.p_usuario,
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data; // Devuelve el ID de la transferencia creada
-}
-
-// 2. Obtener todas las transferencias para el listado
-export async function MostrarTransferencias() {
-  const { data, error } = await supabase.rpc("mostrar_transferencias");
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
-}
-
-// 3. Agregar productos al detalle de la transferencia
-export async function AgregarDetalleTransferencia(p) {
-  const { error } = await supabase.rpc("agregar_detalle_transferencia", {
-    p_transferencia: p.p_transferencia,
-    p_producto: p.p_producto,
-    p_cantidad: p.p_cantidad,
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-}
-
-// 4. Enviar transferencia (Resta stock en Origen y cambia a EN_TRANSITO)
-export async function EnviarTransferencia(p) {
-  const { error, data } = await supabase.rpc("enviar_transferencia", {
-    p_transferencia: p.id,
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
-}
-
-// 5. Recibir transferencia (Suma stock en Destino y cambia a COMPLETADO)
-export async function RecibirTransferencia(p) {
-  const { error, data } = await supabase.rpc("recibir_transferencia", {
-    p_transferencia: p.id,
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
-}
-</file>
-
 <file path="src/supabase/crudUsuarios.jsx">
 import Swal from "sweetalert2";
 import { supabase } from "../index";
@@ -23424,6 +22469,394 @@ export async function ConfirmarVenta(p) {
   }
   return data;
 }
+</file>
+
+<file path="src/supabase/esquema.sql">
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.empresa (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL DEFAULT 'Generica'::text,
+  id_fiscal text DEFAULT '-'::text,
+  direccion_fiscal text DEFAULT '-'::text,
+  simbolo_moneda text DEFAULT '$'::text,
+  logo text DEFAULT '-'::text,
+  id_auth text NOT NULL DEFAULT ''::text UNIQUE,
+  id_usuario bigint,
+  iso text DEFAULT 'PE'::text,
+  pais text DEFAULT 'Peru'::text,
+  currency text DEFAULT 'PEN'::text,
+  impuesto text DEFAULT 'IGV'::text,
+  valor_impuesto numeric DEFAULT '18'::numeric,
+  nombre_moneda text DEFAULT '-'::text,
+  correo text DEFAULT ''::text,
+  pie_pagina_ticket text DEFAULT '-'::text,
+  CONSTRAINT empresa_pkey PRIMARY KEY (id),
+  CONSTRAINT empresa_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.ventas (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  fecha timestamp without time zone NOT NULL DEFAULT now(),
+  monto_total numeric DEFAULT '0'::numeric,
+  total_impuestos numeric DEFAULT '0'::numeric,
+  id_usuario bigint,
+  saldo numeric DEFAULT '0'::numeric,
+  pago_con numeric DEFAULT '0'::numeric,
+  referencia_tarjeta text DEFAULT '-'::text,
+  vuelto numeric DEFAULT '0'::numeric,
+  cantidad_productos bigint DEFAULT '0'::bigint,
+  sub_total numeric DEFAULT '0'::numeric,
+  id_cliente bigint,
+  id_sucursal bigint,
+  id_empresa bigint,
+  estado text DEFAULT 'pendiente'::text,
+  valor_impuesto numeric DEFAULT '0'::numeric,
+  id_cierre_caja bigint,
+  nro_comprobante text DEFAULT gen_random_uuid(),
+  CONSTRAINT ventas_pkey PRIMARY KEY (id),
+  CONSTRAINT public_ventas_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.clientes_proveedores(id),
+  CONSTRAINT ventas_id_cierre_caja_fkey FOREIGN KEY (id_cierre_caja) REFERENCES public.cierrecaja(id),
+  CONSTRAINT ventas_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.almacen (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_sucursal bigint NOT NULL,
+  fecha_creacion timestamp without time zone DEFAULT now(),
+  delete boolean DEFAULT true,
+  nombre text,
+  default boolean DEFAULT true,
+  CONSTRAINT almacen_pkey PRIMARY KEY (id),
+  CONSTRAINT almacen_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id)
+);
+CREATE TABLE public.asignacion_sucursal (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_sucursal bigint NOT NULL,
+  id_usuario bigint,
+  id_caja bigint,
+  CONSTRAINT asignacion_sucursal_pkey PRIMARY KEY (id),
+  CONSTRAINT asignacion_sucursal_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id),
+  CONSTRAINT asignacion_sucursal_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id),
+  CONSTRAINT asignacion_sucursal_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.caja (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  descripcion text NOT NULL,
+  id_sucursal bigint,
+  fecha_creacion timestamp without time zone DEFAULT now(),
+  delete boolean DEFAULT true,
+  print boolean DEFAULT false,
+  CONSTRAINT caja_pkey PRIMARY KEY (id),
+  CONSTRAINT caja_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id)
+);
+CREATE TABLE public.categorias (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  color text,
+  icono text DEFAULT '-'::text,
+  id_empresa bigint,
+  CONSTRAINT categorias_pkey PRIMARY KEY (id),
+  CONSTRAINT public_categorias_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.cierrecaja (
+  fechainicio timestamp without time zone DEFAULT now(),
+  fechacierre timestamp without time zone DEFAULT now(),
+  id_usuario integer,
+  total_efectivo_calculado numeric DEFAULT '0'::numeric,
+  total_efectivo_real numeric DEFAULT '0'::numeric,
+  estado bigint DEFAULT '0'::bigint,
+  diferencia_efectivo numeric DEFAULT '0'::numeric,
+  id_caja integer,
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  CONSTRAINT cierrecaja_pkey PRIMARY KEY (id),
+  CONSTRAINT cierrecaja_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id),
+  CONSTRAINT cierrecaja_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.clientes_proveedores (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombres text NOT NULL DEFAULT '-'::text,
+  id_empresa bigint,
+  direccion text DEFAULT '-'::text,
+  telefono text DEFAULT '-'::text,
+  email text DEFAULT '-'::text,
+  identificador_nacional text DEFAULT '-'::text,
+  identificador_fiscal text DEFAULT '-'::text,
+  tipo text DEFAULT '-'::text,
+  estado text DEFAULT 'activo'::text,
+  fecha_registro timestamp without time zone DEFAULT now(),
+  CONSTRAINT clientes_proveedores_pkey PRIMARY KEY (id),
+  CONSTRAINT public_clientes_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.detalle_venta (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_venta bigint NOT NULL,
+  cantidad numeric DEFAULT '1'::numeric,
+  precio_venta numeric,
+  total numeric,
+  descripcion text,
+  id_producto bigint,
+  precio_compra numeric,
+  id_sucursal bigint,
+  estado text DEFAULT 'nueva'::text,
+  id_almacen bigint,
+  CONSTRAINT detalle_venta_pkey PRIMARY KEY (id),
+  CONSTRAINT detalle_venta_id_sucursal_fkey FOREIGN KEY (id_sucursal) REFERENCES public.sucursales(id),
+  CONSTRAINT public_detalle_venta_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id),
+  CONSTRAINT public_detalle_venta_id_venta_fkey FOREIGN KEY (id_venta) REFERENCES public.ventas(id)
+);
+CREATE TABLE public.impresoras (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_caja bigint NOT NULL,
+  pc_name text DEFAULT '-'::text,
+  ip_local text DEFAULT '-'::text,
+  state boolean DEFAULT false,
+  name text DEFAULT '-'::text,
+  CONSTRAINT impresoras_pkey PRIMARY KEY (id),
+  CONSTRAINT impresoras_id_caja_fkey FOREIGN KEY (id_caja) REFERENCES public.caja(id)
+);
+CREATE TABLE public.kardex (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  fecha date NOT NULL,
+  motivo text,
+  cantidad numeric,
+  id_producto bigint,
+  id_usuario bigint,
+  tipo text,
+  estado text,
+  total numeric,
+  costo numeric,
+  habia numeric,
+  hay numeric,
+  CONSTRAINT kardex_pkey PRIMARY KEY (id),
+  CONSTRAINT public_kardex_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id),
+  CONSTRAINT public_kardex_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.metodos_pago (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  id_empresa bigint,
+  icono text DEFAULT '-'::text,
+  ver_nombre boolean DEFAULT true,
+  delete_update boolean DEFAULT false,
+  CONSTRAINT metodos_pago_pkey PRIMARY KEY (id),
+  CONSTRAINT metodos_pago_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.modulos (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL DEFAULT '-'::text,
+  check boolean DEFAULT false,
+  descripcion text DEFAULT '-'::text,
+  icono text DEFAULT '-'::text,
+  link text DEFAULT '-'::text,
+  etiquetas text DEFAULT '#configuracion'::text,
+  CONSTRAINT modulos_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.movimientos_caja (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  fecha_movimiento timestamp without time zone NOT NULL DEFAULT now(),
+  tipo_movimiento text,
+  monto numeric DEFAULT '0'::numeric,
+  id_metodo_pago bigint,
+  descripcion text DEFAULT '-'::text,
+  id_usuario bigint,
+  id_cierre_caja bigint,
+  id_ventas bigint,
+  vuelto numeric DEFAULT '0'::numeric,
+  CONSTRAINT movimientos_caja_pkey PRIMARY KEY (id),
+  CONSTRAINT movimientos_caja_id_cierre_caja_fkey FOREIGN KEY (id_cierre_caja) REFERENCES public.cierrecaja(id),
+  CONSTRAINT movimientos_caja_id_metodo_pago_fkey FOREIGN KEY (id_metodo_pago) REFERENCES public.metodos_pago(id),
+  CONSTRAINT movimientos_caja_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
+  CONSTRAINT movimientos_caja_id_ventas_fkey FOREIGN KEY (id_ventas) REFERENCES public.ventas(id)
+);
+CREATE TABLE public.movimientos_stock (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_almacen bigint NOT NULL,
+  id_producto bigint,
+  tipo_movimiento text,
+  cantidad numeric,
+  fecha timestamp with time zone DEFAULT now(),
+  detalle text DEFAULT '-'::text,
+  origen text DEFAULT '-'::text,
+  CONSTRAINT movimientos_stock_pkey PRIMARY KEY (id),
+  CONSTRAINT movimientos_stock_id_almacen_fkey FOREIGN KEY (id_almacen) REFERENCES public.almacen(id),
+  CONSTRAINT movimientos_stock_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
+);
+CREATE TABLE public.multiprecios (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  precio_venta numeric NOT NULL,
+  id_producto bigint,
+  cantidad numeric,
+  CONSTRAINT multiprecios_pkey PRIMARY KEY (id),
+  CONSTRAINT multiprecios_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
+);
+CREATE TABLE public.permisos (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_usuario bigint NOT NULL,
+  idmodulo bigint,
+  CONSTRAINT permisos_pkey PRIMARY KEY (id),
+  CONSTRAINT permisos_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id),
+  CONSTRAINT permisos_idmodulo_fkey FOREIGN KEY (idmodulo) REFERENCES public.modulos(id)
+);
+CREATE TABLE public.permisos_dafault (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_rol bigint NOT NULL,
+  id_modulo bigint,
+  CONSTRAINT permisos_dafault_pkey PRIMARY KEY (id),
+  CONSTRAINT permisos_dafault_id_modulo_fkey FOREIGN KEY (id_modulo) REFERENCES public.modulos(id),
+  CONSTRAINT permisos_dafault_id_rol_fkey FOREIGN KEY (id_rol) REFERENCES public.roles(id)
+);
+CREATE TABLE public.productos (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  precio_venta numeric DEFAULT '0'::numeric,
+  precio_compra numeric DEFAULT '0'::numeric,
+  id_categoria bigint,
+  codigo_barras text,
+  codigo_interno text,
+  id_empresa bigint,
+  sevende_por text DEFAULT 'unidad'::text,
+  maneja_inventarios boolean DEFAULT false,
+  maneja_multiprecios boolean DEFAULT false,
+  CONSTRAINT productos_pkey PRIMARY KEY (id),
+  CONSTRAINT public_productos_id_categoria_fkey FOREIGN KEY (id_categoria) REFERENCES public.categorias(id),
+  CONSTRAINT public_productos_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.roles (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.serializacion_comprobantes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_tipo_comprobante bigint NOT NULL,
+  serie text,
+  cantidad_numeros bigint,
+  correlativo bigint,
+  sucursal_id bigint,
+  por_default boolean DEFAULT false,
+  CONSTRAINT serializacion_comprobantes_pkey PRIMARY KEY (id),
+  CONSTRAINT serializacion_comprobantes_id_tipo_comprobante_fkey FOREIGN KEY (id_tipo_comprobante) REFERENCES public.tipo_comprobantes(id),
+  CONSTRAINT serializacion_comprobantes_sucursal_id_fkey FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id)
+);
+CREATE TABLE public.stock (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_almacen bigint NOT NULL,
+  id_producto bigint,
+  stock numeric DEFAULT '0'::numeric,
+  stock_minimo numeric DEFAULT '0'::numeric,
+  ubicacion text DEFAULT '-'::text,
+  CONSTRAINT stock_pkey PRIMARY KEY (id),
+  CONSTRAINT stock_id_almacen_fkey FOREIGN KEY (id_almacen) REFERENCES public.almacen(id),
+  CONSTRAINT stock_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
+);
+CREATE TABLE public.sucursales (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text,
+  direccion_fiscal text,
+  id_empresa bigint,
+  delete boolean DEFAULT true,
+  CONSTRAINT sucursales_pkey PRIMARY KEY (id),
+  CONSTRAINT sucursales_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.tipo_comprobantes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  destino text,
+  CONSTRAINT tipo_comprobantes_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.tipodocumento (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL DEFAULT ''::text,
+  id_empresa bigint,
+  CONSTRAINT tipodocumento_pkey PRIMARY KEY (id),
+  CONSTRAINT tipodocumento_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id)
+);
+CREATE TABLE public.usuarios (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombres text NOT NULL DEFAULT '-'::text,
+  id_tipodocumento bigint,
+  nro_doc text DEFAULT '-'::text,
+  telefono text DEFAULT '-'::text,
+  id_rol bigint,
+  correo text DEFAULT '-'::text,
+  fecharegistro date DEFAULT now(),
+  estado text DEFAULT 'ACTIVO'::text,
+  id_auth text UNIQUE,
+  tema text DEFAULT 'light'::text,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id),
+  CONSTRAINT usuarios_id_rol_fkey FOREIGN KEY (id_rol) REFERENCES public.roles(id)
+);
+CREATE TABLE public.pedidos_compra (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  fecha timestamp without time zone NOT NULL DEFAULT now(),
+  total numeric DEFAULT '0'::numeric,
+  id_proveedor bigint,
+  id_usuario bigint,
+  id_empresa bigint,
+  id_sucursal bigint,
+  id_almacen bigint,
+  observacion text DEFAULT '-'::text,
+  estado text DEFAULT 'BORRADOR'::text,
+  fecha_entrega timestamp without time zone,
+  fecha_recepcion timestamp without time zone,
+  usuario_creacion bigint,
+  usuario_recibe bigint,
+  CONSTRAINT pedidos_compra_pkey PRIMARY KEY (id),
+  CONSTRAINT pedidos_compra_id_empresa_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresa(id),
+  CONSTRAINT pedidos_compra_id_proveedor_fkey FOREIGN KEY (id_proveedor) REFERENCES public.clientes_proveedores(id),
+  CONSTRAINT pedidos_compra_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.detalle_pedido_compra (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_pedido_compra bigint NOT NULL,
+  id_producto bigint NOT NULL,
+  cantidad numeric DEFAULT '1'::numeric,
+  precio_compra numeric DEFAULT '0'::numeric,
+  precio_venta numeric DEFAULT '0'::numeric,
+  total numeric DEFAULT '0'::numeric,
+  cantidad_recibida numeric DEFAULT 0,
+  estado text DEFAULT 'PENDIENTE'::text,
+  CONSTRAINT detalle_pedido_compra_pkey PRIMARY KEY (id),
+  CONSTRAINT detalle_pedido_compra_id_pedido_fkey FOREIGN KEY (id_pedido_compra) REFERENCES public.pedidos_compra(id),
+  CONSTRAINT detalle_pedido_compra_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id)
+);
+CREATE TABLE public.transferencias (
+  id_transferencia integer NOT NULL DEFAULT nextval('transferencias_id_transferencia_seq'::regclass),
+  fecha timestamp without time zone DEFAULT now(),
+  id_sucursal_origen integer,
+  id_sucursal_destino integer,
+  estado character varying,
+  observacion text,
+  usuario_creacion integer,
+  CONSTRAINT transferencias_pkey PRIMARY KEY (id_transferencia)
+);
+CREATE TABLE public.detalle_transferencia (
+  id_detalle integer NOT NULL DEFAULT nextval('detalle_transferencia_id_detalle_seq'::regclass),
+  id_transferencia integer,
+  id_producto integer,
+  cantidad numeric,
+  cantidad_recibida numeric DEFAULT 0,
+  CONSTRAINT detalle_transferencia_pkey PRIMARY KEY (id_detalle)
+);
+CREATE TABLE public.movimientos_inventario (
+  id_movimiento integer NOT NULL DEFAULT nextval('movimientos_inventario_id_movimiento_seq'::regclass),
+  fecha timestamp without time zone,
+  tipo character varying,
+  id_producto integer,
+  id_sucursal integer,
+  cantidad numeric,
+  CONSTRAINT movimientos_inventario_pkey PRIMARY KEY (id_movimiento)
+);
+CREATE TABLE public.transferencia_almacen (
+  id integer NOT NULL DEFAULT nextval('transferencia_almacen_id_seq'::regclass),
+  fecha timestamp without time zone DEFAULT now(),
+  id_almacen_origen integer NOT NULL,
+  id_almacen_destino integer NOT NULL,
+  estado character varying DEFAULT 'PENDIENTE'::character varying,
+  observacion text,
+  id_usuario integer,
+  CONSTRAINT transferencia_almacen_pkey PRIMARY KEY (id)
+);
 </file>
 
 <file path="src/supabase/supabase.config.jsx">
@@ -25836,6 +25269,217 @@ const ContainerMensajeStock = styled.div`
 `;
 </file>
 
+<file path="src/components/organismos/formularios/RegistrarTransferencia.jsx">
+import React, { useState } from "react";
+import { useTransferenciasStore } from "../../../store/TransferenciasStore";
+import { useUsuariosStore } from "../../../store/UsuariosStore";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+export const RegistrarTransferencia = ({ onClose }) => {
+  const store = useTransferenciasStore();
+  const { datausuarios } = useUsuariosStore();
+  const queryClient = useQueryClient();
+
+  const [productoSeleccionado, setProductoSeleccionado] = useState("");
+  const [cantidadInput, setCantidadInput] = useState(1);
+  const [observacion, setObservacion] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  // Cargar catálogos iniciales mediante React Query
+  useQuery({
+    queryKey: ["cargarAlmacenesForm"],
+    queryFn: async () => {
+      await store.cargarAlmacenes();
+      return true;
+    }
+  });
+
+  useQuery({
+    queryKey: ["cargarProductosForm"],
+    queryFn: async () => {
+      await store.cargarProductos();
+      return true;
+    }
+  });
+
+  const handleAgregarProducto = (e) => {
+    e.preventDefault();
+    if (!productoSeleccionado) return toast.error("Selecciona un producto");
+    if (cantidadInput <= 0) return toast.error("La cantidad debe ser mayor a 0");
+
+    const prodReal = store.productosDB.find((p) => p.id === parseInt(productoSeleccionado));
+    store.agregarProductoTransferencia(prodReal, cantidadInput);
+    
+    setProductoSeleccionado("");
+    setCantidadInput(1);
+  };
+
+  const handleGuardarTodo = async () => {
+    setGuardando(true);
+    try {
+      // Guarda en la base de datos a través de Zustand
+      await store.guardarTransferencia(datausuarios?.id, observacion);
+      
+      toast.success("¡Transferencia registrada con éxito!");
+      
+      // Invalidar la query de la tabla principal para que React Query sepa que hay datos nuevos
+      queryClient.invalidateQueries(["historialTransferencias"]);
+      
+      onClose(); // Cerrar ventana modal
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="modal-transferencia" style={{ padding: "25px", background: "#fff", borderRadius: "12px", width: "550px", boxShadow: "0px 5px 15px rgba(0,0,0,0.3)" }}>
+      <h2 style={{ marginTop: 0, color: "#2c3e50" }}>Nueva Transferencia de Mercancía</h2>
+      
+      {/* CAMPOS DE CONFIGURACIÓN */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "20px" }}>
+        <div>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Fecha:</label>
+          <input 
+            type="date" 
+            style={{ width: "90%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+            value={store.fechaTransferencia} 
+            onChange={(e) => store.setFechaTransferencia(e.target.value)} 
+          />
+        </div>
+        
+        <div>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Almacén Origen:</label>
+          <select 
+            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+            value={store.almacenOrigen}
+            onChange={(e) => store.setAlmacenOrigen(e.target.value)}
+          >
+            <option value="">-- Seleccione Origen --</option>
+            {store.almacenesDB.map(almacen => (
+              <option key={almacen.id} value={almacen.id}>{almacen.nombre}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ gridColumn: "span 2" }}>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Almacén Destino:</label>
+          <select 
+            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+            value={store.almacenDestino}
+            onChange={(e) => store.setAlmacenDestino(e.target.value)}
+          >
+            <option value="">-- Seleccione Destino --</option>
+            {store.almacenesDB.map(almacen => (
+              <option key={almacen.id} value={almacen.id}>{almacen.nombre}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* ADICIÓN DE LÍNEAS DE PRODUCTOS */}
+      <form onSubmit={handleAgregarProducto} style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "20px", background: "#f8f9fa", padding: "12px", borderRadius: "8px", border: "1px solid #e9ecef" }}>
+        <div style={{ flex: 2 }}>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Producto:</label>
+          <select 
+            style={{ width: "100%", padding: "8px", borderRadius: "4px" }}
+            value={productoSeleccionado} 
+            onChange={(e) => setProductoSeleccionado(e.target.value)}
+          >
+            <option value="">-- Elegir Ítem --</option>
+            {store.productosDB.map(p => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Cant:</label>
+          <input 
+            type="number" 
+            min="1" 
+            style={{ width: "80%", padding: "8px", borderRadius: "4px" }}
+            value={cantidadInput} 
+            onChange={(e) => setCantidadInput(e.target.value)} 
+          />
+        </div>
+        <button type="submit" style={{ background: "#2c3e50", color: "#fff", padding: "9px 15px", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+          Añadir
+        </button>
+      </form>
+
+      {/* DETALLE TEMPORAL */}
+      <h4 style={{ margin: "10px 0" }}>Ítems a transferir</h4>
+      <div style={{ maxHeight: "150px", overflowY: "auto", border: "1px solid #dee2e6", borderRadius: "4px", marginBottom: "15px" }}>
+        <table width="100%" style={{ borderCollapse: "collapse" }} cellPadding="8">
+          <thead>
+            <tr style={{ background: "#e9ecef", textAlign: "left" }}>
+              <th>Producto</th>
+              <th style={{ textAlign: "center" }}>Cantidad</th>
+              <th style={{ textAlign: "center" }}>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {store.productosTransferir.map((prod) => (
+              <tr key={prod.id} style={{ borderBottom: "1px solid #dee2e6" }}>
+                <td>{prod.nombre}</td>
+                <td align="center" style={{ fontWeight: "bold" }}>{prod.cantidad}</td>
+                <td align="center">
+                  <button 
+                    type="button"
+                    onClick={() => store.eliminarProductoTransferencia(prod.id)}
+                    style={{ color: "#e74c3c", border: "none", background: "none", cursor: "pointer" }}
+                  >
+                    Quitar ❌
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {store.productosTransferir.length === 0 && (
+              <tr>
+                <td colSpan="3" align="center" style={{ color: "#7f8c8d", padding: "15px" }}>La lista está vacía.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "15px", marginBottom: "15px" }}>
+        Total Unidades: <span style={{ color: "#e67e22" }}>{store.totalCantidadProductos}</span>
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Observación:</label>
+        <input 
+          type="text" 
+          placeholder="Escriba una nota descriptiva..."
+          style={{ width: "96%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+          value={observacion} 
+          onChange={(e) => setObservacion(e.target.value)} 
+        />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+        <button 
+          onClick={() => { store.resetFormulario(); onClose(); }} 
+          style={{ padding: "8px 15px", background: "#bdc3c7", border: "none", borderRadius: "4px", cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+        <button 
+          onClick={handleGuardarTodo} 
+          disabled={store.productosTransferir.length === 0 || guardando}
+          style={{ padding: "8px 15px", background: store.productosTransferir.length === 0 ? "#95a5a6" : "#27ae60", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+        >
+          {guardando ? "Procesando..." : "Confirmar y Enviar"}
+        </button>
+      </div>
+    </div>
+  );
+};
+</file>
+
 <file path="src/components/organismos/reports/ReportInventarios.jsx">
 import styled from "styled-components";
 import {
@@ -27197,6 +26841,146 @@ const Container = styled.div`
 `;
 </file>
 
+<file path="src/components/organismos/tablas/TablaTransferencia.jsx">
+import styled from "styled-components";
+import { useState } from "react";
+import {
+  ContentAccionesTabla,
+  Paginacion,
+  useTransferenciasStore,
+} from "../../../index";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { FaArrowsAltV } from "react-icons/fa";
+
+export function TablaTransferencia({ data, SetopenRegistro, setdataSelect, setAccion }) {
+  // Obtenemos las funciones del store
+  const { enviarTransferencia, recibirTransferencia } = useTransferenciasStore();
+  
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+
+  const columns = [
+    { accessorKey: "id", header: "ID" },
+    { 
+      accessorKey: "fecha", 
+      header: "Fecha",
+      cell: (info) => <span>{new Date(info.getValue()).toLocaleDateString()}</span> 
+    },
+    { accessorKey: "origen", header: "Origen" },
+    { accessorKey: "destino", header: "Destino" },
+    { accessorKey: "estado", header: "Estado" },
+    {
+      header: "Acciones",
+      cell: (info) => {
+        const item = info.row.original;
+        return (
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+            {/* Botón ENVIAR: Solo aparece si está PENDIENTE */}
+            {item.estado === "PENDIENTE" && (
+              <button 
+                onClick={() => enviarTransferencia(item.id)}
+                style={{ background: "#3498db", color: "white", padding: "5px 10px", borderRadius: "4px", border: "none" }}
+              >
+                Enviar
+              </button>
+            )}
+            
+            {/* Botón RECIBIR: Solo aparece si está EN_TRANSITO */}
+            {item.estado === "EN_TRANSITO" && (
+              <button 
+                onClick={() => recibirTransferencia(item.id)}
+                style={{ background: "#27ae60", color: "white", padding: "5px 10px", borderRadius: "4px", border: "none" }}
+              >
+                Recibir
+              </button>
+            )}
+
+            <ContentAccionesTabla
+              editar={() => {
+                setAccion("Editar");
+                setdataSelect(item);
+                SetopenRegistro(true);
+              }}
+              eliminar={() => console.log("Eliminar", item.id)}
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: { pagination },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  return (
+    <Container>
+      <table className="responsive-table">
+        <thead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th key={header.id}>
+                  {flexRender(header.column.columnDef.header, header.getContext())}
+                  <span style={{ cursor: "pointer", marginLeft: "5px" }} onClick={header.column.getToggleSortingHandler()}>
+                    <FaArrowsAltV />
+                  </span>
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((item) => (
+            <tr key={item.id}>
+              {item.getVisibleCells().map((cell) => (
+                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <Paginacion
+        table={table}
+        irinicio={() => table.setPageIndex(0)}
+        pagina={table.getState().pagination.pageIndex + 1}
+        maximo={table.getPageCount()}
+      />
+    </Container>
+  );
+}
+
+const Container = styled.div`
+  position: relative;
+  .responsive-table {
+    width: 100%;
+    border-spacing: 0;
+    thead th {
+      border-bottom: 2px solid ${({ theme }) => theme.color2};
+      padding: 10px;
+    }
+    tbody td {
+      text-align: center;
+      padding: 10px;
+      border-bottom: 1px solid rgba(161, 161, 161, 0.2);
+    }
+  }
+`;
+</file>
+
 <file path="src/components/templates/DashboardTemplate.jsx">
 import styled from "styled-components";
 import { Device } from "../../styles/breakpoints";
@@ -27511,6 +27295,96 @@ const PanelLogin = styled.div`
   display:flex;
   flex-direction:column;
   gap:20px;
+`;
+</file>
+
+<file path="src/components/templates/TransferenciasTemplate.jsx">
+import styled from "styled-components";
+import { useState } from "react";
+import { Toaster } from "sonner";
+import {
+  Btn1,
+  TablaTransferencia,
+  RegistrarTransferencia,
+  Title,
+  useTransferenciasStore,
+} from "../../index";
+import { v } from "../../styles/variables";
+
+export function TransferenciasTemplate() {
+  // Estado para el modal de registro
+  const [openRegistro, setOpenRegistro] = useState(false);
+  // Estados para controlar la acción (Nuevo/Editar) y los datos seleccionados
+  const [accion, setAccion] = useState("Nuevo");
+  const [dataSelect, setDataSelect] = useState(null);
+
+  // Obtenemos los datos desde el store
+  const { dataTransferencias } = useTransferenciasStore();
+
+  // Función para abrir el modal de nuevo registro
+  function nuevoRegistro() {
+    setDataSelect(null);
+    setAccion("Nuevo");
+    setOpenRegistro(true);
+  }
+
+  return (
+    <Container>
+      <Toaster richColors position="top-right" />
+      
+      {openRegistro && (
+        <RegistrarTransferencia
+          onClose={() => setOpenRegistro(false)}
+          dataSelect={dataSelect}
+          accion={accion}
+          state={openRegistro}
+        />
+      )}
+
+      <section className="area1">
+        <Title>Transferencias de Almacén</Title>
+        <Btn1
+          funcion={nuevoRegistro}
+          bgcolor={v.colorPrincipal}
+          titulo="Nueva Transferencia"
+          icono={<v.iconoagregar />}
+        />
+      </section>
+
+      <section className="main">
+        <TablaTransferencia 
+          data={dataTransferencias}
+          SetopenRegistro={setOpenRegistro} 
+          setdataSelect={setDataSelect} 
+          setAccion={setAccion} 
+        />
+      </section>
+    </Container>
+  );
+}
+
+const Container = styled.div`
+  height: calc(100vh - 80px);
+  margin-top: 50px;
+  padding: 15px;
+  display: grid;
+  grid-template:
+    "area1" 60px
+    "main" auto;
+    
+  .area1 {
+    grid-area: area1;
+    display: flex;
+    justify-content: space-between; /* Ajustado para mejor distribución */
+    align-items: center;
+    gap: 15px;
+    padding-bottom: 10px;
+  }
+  
+  .main {
+    grid-area: main;
+    overflow-y: auto; /* Permite scroll si la tabla es muy larga */
+  }
 `;
 </file>
 
@@ -27830,6 +27704,152 @@ export function Productos() {
 }
 </file>
 
+<file path="src/pages/Transferencias.jsx">
+import React, { useState } from "react";
+import { useTransferenciasStore } from "../store/TransferenciasStore";
+import { RegistrarTransferencia } from "../components/organismos/formularios/RegistrarTransferencia";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+export const Transferencias = () => {
+  const store = useTransferenciasStore();
+  const [openForm, setOpenForm] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { isLoading } = useQuery({
+    queryKey: ["historialTransferencias"],
+    queryFn: async () => {
+      await store.mostrarTransferencias();
+      return true;
+    }
+  });
+
+  const handleRecibir = async (id) => {
+    try {
+      await store.recibirTransferencia(id);
+      toast.success("¡Mercancía recibida e inventario actualizado!");
+      queryClient.invalidateQueries(["historialTransferencias"]);
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const handleEliminar = async (id) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la transferencia #${id}?`)) {
+      try {
+        await store.eliminarTransferencia(id);
+        toast.success("Transferencia eliminada por completo.");
+        queryClient.invalidateQueries(["historialTransferencias"]);
+      } catch (e) { toast.error(e.message); }
+    }
+  };
+
+  const handleEditar = async (item) => {
+    await store.prepararEdicion(item);
+    setOpenForm(true);
+  };
+
+  return (
+    <div style={{ padding: "30px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1 style={{ color: "#2c3e50", margin: 0 }}>Gestión de Transferencias</h1>
+        <button 
+          onClick={() => { store.resetFormulario(); setOpenForm(true); }} 
+          style={{ background: "#2c3e50", color: "#fff", padding: "10px 20px", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "bold" }}
+        >
+          ➕ Registrar Envío
+        </button>
+      </div>
+
+      {openForm && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.4)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <RegistrarTransferencia onClose={() => setOpenForm(false)} />
+        </div>
+      )}
+
+      {isLoading ? <p>Cargando registros...</p> : (
+        <table width="100%" border="1" cellPadding="12" style={{ borderCollapse: "collapse", background: "#fff", border: "1px solid #dee2e6" }}>
+          <thead>
+            <tr style={{ background: "#2c3e50", color: "#fff", textAlign: "left" }}>
+              <th style={{ textAlign: "center" }}>Nº</th>
+              <th>Fecha</th>
+              <th>Origen</th>
+              <th>Destino</th>
+              <th style={{ textAlign: "center" }}>Estado</th>
+              <th>Observación</th>
+              <th style={{ textAlign: "center" }}>Acciones Completas</th>
+            </tr>
+          </thead>
+          <tbody>
+  {store.transferencias.map((item) => {
+    // Forzamos el texto a mayúsculas limpias para evitar fallos de formato
+    const estadoLimpio = item.estado ? item.estado.toUpperCase().trim() : "";
+    
+    // Descomenta la línea de abajo si quieres ver en la consola F12 exactamente qué texto llega
+    // console.log(`Transferencia #${item.id} - Estado real en BD: "${item.estado}" -> Evaluado como: "${estadoLimpio}"`);
+
+    return (
+      <tr key={item.id} style={{ borderBottom: "1px solid #dee2e6" }}>
+        <td align="center" style={{ fontWeight: "bold" }}>#{item.id}</td>
+        <td>{new Date(item.fecha).toLocaleDateString()}</td>
+        <td>{item.almacen_origen?.nombre || "-"}</td>
+        <td style={{ fontWeight: "500", color: "#27ae60" }}>{item.almacen_destino?.nombre || "-"}</td>
+        <td align="center">
+          <span style={{ 
+            padding: "5px 10px", 
+            borderRadius: "15px", 
+            fontSize: "11px", 
+            fontWeight: "bold",
+            color: "#fff",
+            background: estadoLimpio === "RECIBIDO" ? "#2ecc71" : "#3498db"
+          }}>
+            {item.estado || "SIN ESTADO"}
+          </span>
+        </td>
+        <td style={{ color: "#7f8c8d", fontStyle: "italic" }}>{item.observacion || "-"}</td>
+        <td align="center">
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+            
+            {/* Opciones activas si la transferencia NO ha sido recibida aún */}
+            {estadoLimpio !== "RECIBIDO" ? (
+              <>
+                <button 
+                  onClick={() => handleRecibir(item.id)} 
+                  style={{ background: "#2ecc71", color: "#fff", border: "none", padding: "6px 10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontSize: "11px" }}
+                >
+                  ✔ Recibir
+                </button>
+
+                <button 
+                  onClick={() => handleEditar(item)} 
+                  style={{ background: "#f39c12", color: "#fff", border: "none", padding: "6px 10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontSize: "11px" }}
+                >
+                  ✏ Editar
+                </button>
+              </>
+            ) : (
+              <span style={{ color: "#7f8c8d", fontSize: "11px", fontStyle: "italic" }}>Proceso finalizado</span>
+            )}
+
+            {/* Eliminar siempre disponible */}
+            <button 
+              onClick={() => handleEliminar(item.id)} 
+              style={{ background: "#e74c3c", color: "#fff", border: "none", padding: "6px 10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontSize: "11px" }}
+            >
+              ❌ Eliminar
+            </button>
+
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+</file>
+
 <file path="src/store/DetalleVentasStore.jsx">
 import { create } from "zustand";
 import {
@@ -27989,6 +28009,189 @@ cancelarPedidoCompra: async (p) => {
 
 
 
+}));
+</file>
+
+<file path="src/store/TransferenciasStore.jsx">
+import { create } from "zustand";
+import { supabase } from "../supabase/supabase.config";
+
+export const useTransferenciasStore = create((set, get) => ({
+  transferencias: [],
+  almacenesDB: [],
+  productosDB: [],
+  isLoading: false,
+
+  // Estados del formulario
+  transferenciaSeleccionada: null, 
+  almacenOrigen: "",
+  almacenDestino: "",
+  fechaTransferencia: new Date().toISOString().split("T")[0],
+  productosTransferir: [], 
+  totalCantidadProductos: 0,
+
+  setAlmacenOrigen: (id) => set({ almacenOrigen: id }),
+  setAlmacenDestino: (id) => set({ almacenDestino: id }),
+  setFechaTransferencia: (fecha) => set({ fechaTransferencia: fecha }),
+
+  cargarAlmacenes: async () => {
+    const { data } = await supabase.from("almacen").select("id, nombre");
+    if (data) set({ almacenesDB: data });
+  },
+
+  cargarProductos: async () => {
+    const { data } = await supabase.from("productos").select("id, nombre");
+    if (data) set({ productosDB: data });
+  },
+
+  // Mostrar historial en la tabla principal
+  mostrarTransferencias: async () => {
+    set({ isLoading: true });
+    const { data } = await supabase
+      .from("transferencia_almacen")
+      .select(`
+        id,
+        fecha,
+        estado,
+        observacion,
+        id_almacen_origen,
+        id_almacen_destino,
+        almacen_origen:almacen!id_almacen_origen(nombre),
+        almacen_destino:almacen!id_almacen_destino(nombre)
+      `)
+      .order("id", { ascending: false });
+
+    set({ transferencias: data || [], isLoading: false });
+  },
+
+  // Acción 1: Cambiar estado a RECIBIDO
+  recibirTransferencia: async (id) => {
+    const { error } = await supabase
+      .from("transferencia_almacen")
+      .update({ estado: "RECIBIDO" })
+      .eq("id", id);
+    if (error) throw error;
+    await get().mostrarTransferencias();
+  },
+
+  // Acción 2: Eliminar transferencia y sus detalles por CASCADE o limpieza manual
+  eliminarTransferencia: async (id) => {
+    // Primero limpiamos los detalles para evitar violaciones de clave foránea
+    await supabase.from("detalle_transferencia").delete().eq("id_transferencia", id);
+    // Luego borramos la cabecera
+    const { error } = await supabase.from("transferencia_almacen").delete().eq("id", id);
+    if (error) throw error;
+    await get().mostrarTransferencias();
+  },
+
+  // Acción 3: Cargar datos para edición
+  prepararEdicion: async (transferencia) => {
+    set({ isLoading: true });
+    const { data: detalles, error } = await supabase
+      .from("detalle_transferencia")
+      .select(`id_producto, cantidad, productos:id_producto(nombre)`)
+      .eq("id_transferencia", transferencia.id);
+
+    if (error) {
+      set({ isLoading: false });
+      return;
+    }
+
+    const productosMapeados = detalles.map(d => ({
+      id: d.id_producto,
+      nombre: d.productos?.nombre || "Desconocido",
+      cantidad: parseFloat(d.cantidad)
+    }));
+
+    set({
+      transferenciaSeleccionada: transferencia.id,
+      almacenOrigen: transferencia.id_almacen_origen,
+      almacenDestino: transferencia.id_almacen_destino,
+      fechaTransferencia: transferencia.fecha,
+      productosTransferir: productosMapeados,
+      totalCantidadProductos: productosMapeados.reduce((acc, p) => acc + p.cantidad, 0),
+      isLoading: false
+    });
+  },
+
+  agregarProductoTransferencia: (producto, cantidad) => {
+    const { productosTransferir } = get();
+    const existe = productosTransferir.find((p) => p.id === producto.id);
+    let nuevos = existe 
+      ? productosTransferir.map((p) => p.id === producto.id ? { ...p, cantidad: p.cantidad + parseFloat(cantidad) } : p)
+      : [...productosTransferir, { ...producto, cantidad: parseFloat(cantidad) }];
+    set({ productosTransferir: nuevos, totalCantidadProductos: nuevos.reduce((acc, p) => acc + p.cantidad, 0) });
+  },
+
+  eliminarProductoTransferencia: (productoId) => {
+    const nuevos = get().productosTransferir.filter((p) => p.id !== productoId);
+    set({ productosTransferir: nuevos, totalCantidadProductos: nuevos.reduce((acc, p) => acc + p.cantidad, 0) });
+  },
+
+  resetFormulario: () => set({
+    transferenciaSeleccionada: null,
+    almacenOrigen: "",
+    almacenDestino: "",
+    fechaTransferencia: new Date().toISOString().split("T")[0],
+    productosTransferir: [],
+    totalCantidadProductos: 0
+  }),
+
+  // GUARDAR (Crea en ENVIADO o Modifica conservando el estado)
+  guardarTransferencia: async (idUsuario, observacion = "-") => {
+    const { transferenciaSeleccionada, almacenOrigen, almacenDestino, fechaTransferencia, productosTransferir } = get();
+
+    if (!almacenOrigen || !almacenDestino) throw new Error("Selecciona los almacenes.");
+    if (almacenOrigen === almacenDestino) throw new Error("Los almacenes deben ser diferentes.");
+    if (productosTransferir.length === 0) throw new Error("Añada productos.");
+
+    let idTransferencia = transferenciaSeleccionada;
+
+    if (idTransferencia) {
+      // Editar
+      const { error: errCab } = await supabase
+        .from("transferencia_almacen")
+        .update({
+          fecha: fechaTransferencia,
+          id_almacen_origen: parseInt(almacenOrigen),
+          id_almacen_destino: parseInt(almacenDestino),
+          observacion: observacion
+        })
+        .eq("id", idTransferencia);
+
+      if (errCab) throw errCab;
+      await supabase.from("detalle_transferencia").delete().eq("id_transferencia", idTransferencia);
+    } else {
+      // Registrar Nueva -> Estado Inicial: ENVIADO 🚀
+      const { data: cabecera, error: errCab } = await supabase
+        .from("transferencia_almacen")
+        .insert({
+          fecha: fechaTransferencia,
+          id_almacen_origen: parseInt(almacenOrigen),
+          id_almacen_destino: parseInt(almacenDestino),
+          estado: "ENVIADO", 
+          observacion: observacion,
+          id_usuario: idUsuario || null
+        })
+        .select().single();
+
+      if (errCab) throw errCab;
+      idTransferencia = cabecera.id;
+    }
+
+    const detallesInsertar = productosTransferir.map((p) => ({
+      id_transferencia: idTransferencia,
+      id_producto: p.id,
+      cantidad: p.cantidad,
+      cantidad_recibida: p.cantidad
+    }));
+
+    const { error: errDet } = await supabase.from("detalle_transferencia").insert(detallesInsertar);
+    if (errDet) throw errDet;
+
+    await get().mostrarTransferencias();
+    get().resetFormulario();
+  }
 }));
 </file>
 
@@ -28177,6 +28380,70 @@ export async function MostrarMayorMovimientoProducto(p) {
     throw new Error(error.message);
   }
 
+  return data;
+}
+</file>
+
+<file path="src/supabase/crudTransferencias.jsx">
+import { supabase } from "../index";
+
+// Nombre de la tabla principal
+const tabla = "transferencia_almacen";
+
+// 1. Crear la cabecera de la transferencia
+export async function InsertarTransferencia(p) {
+  const { error, data } = await supabase.rpc("crear_transferencia", {
+    p_origen: p.p_origen,
+    p_destino: p.p_destino,
+    p_observacion: p.p_observacion,
+    p_usuario: p.p_usuario,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data; // Devuelve el ID de la transferencia creada
+}
+
+// 2. Obtener todas las transferencias para el listado
+export async function MostrarTransferencias() {
+  const { data, error } = await supabase.rpc("mostrar_transferencias");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data;
+}
+
+// 3. Agregar productos al detalle de la transferencia
+export async function AgregarDetalleTransferencia(p) {
+  const { error } = await supabase.rpc("agregar_detalle_transferencia", {
+    p_transferencia: p.p_transferencia,
+    p_producto: p.p_producto,
+    p_cantidad: p.p_cantidad,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+// 4. Enviar transferencia (Resta stock en Origen y cambia a EN_TRANSITO)
+export async function EnviarTransferencia(p) {
+  const { error, data } = await supabase.rpc("enviar_transferencia", {
+    p_transferencia: p.id,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data;
+}
+
+// 5. Recibir transferencia (Suma stock en Destino y cambia a COMPLETADO)
+export async function RecibirTransferencia(p) {
+  const { error, data } = await supabase.rpc("recibir_transferencia", {
+    p_transferencia: p.id,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
   return data;
 }
 </file>

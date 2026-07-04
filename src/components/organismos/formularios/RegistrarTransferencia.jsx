@@ -1,202 +1,236 @@
 import React, { useState, useEffect } from "react";
 import { useTransferenciasStore } from "../../../store/TransferenciasStore";
 import { useUsuariosStore } from "../../../store/UsuariosStore";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export const RegistrarTransferencia = ({ onClose }) => {
-  const store = useTransferenciasStore();
+  const {
+    transferenciaSeleccionada,
+    transferencias,
+    fechaTransferencia,
+    almacenOrigen,
+    almacenDestino,
+    productosTransferir,
+    almacenesDB,
+    productosDB,
+    setFechaTransferencia,
+    setAlmacenOrigen,
+    setAlmacenDestino,
+    agregarProductoTransferencia,
+    eliminarProductoTransferencia,
+    guardarTransferencia,
+    resetFormulario,
+    isLoading
+  } = useTransferenciasStore();
+
   const { datausuarios } = useUsuariosStore();
+  const queryClient = useQueryClient();
 
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [cantidadInput, setCantidadInput] = useState(1);
   const [observacion, setObservacion] = useState("");
+  const [guardando, setGuardando] = useState(false);
 
-  // 🧠 Cargar Almacenes y Productos Reales de la BD usando React Query
-  const { isLoading: cargandoAlmacenes } = useQuery({
-    queryKey: ["cargar almacenes formulario"],
-    queryFn: async () => {
-      await store.cargarAlmacenes();
-      return true;
-    }
-  });
+  // 🔄 Carga segura de catálogos base usando useEffect estándar (Adios errores de useQuery)
+  // 🔄 Carga segura de catálogos base usando useEffect estándar
+  useEffect(() => {
+    const cargarCatalogos = async () => {
+      try {
+        if (almacenesDB.length === 0) {
+          await useTransferenciasStore.getState().cargarAlmacenes();
+        }
+        if (productosDB.length === 0) {
+          await useTransferenciasStore.getState().cargarProductos();
+        }
+      } catch (error) {
+        console.error("❌ Error al cargar los catálogos en el formulario:", error);
+      }
+    };
 
-  const { isLoading: cargandoProductos } = useQuery({
-    queryKey: ["cargar productos formulario"],
-    queryFn: async () => {
-      await store.cargarProductos();
-      return true;
+    cargarCatalogos();
+  }, [almacenesDB.length, productosDB.length]);
+
+  // Sincronizar observaciones en modo edición
+  useEffect(() => {
+    if (transferenciaSeleccionada) {
+      const transferenciaActual = transferencias.find(
+        (t) => (t.id || t.id_transferencia) === transferenciaSeleccionada
+      );
+      if (transferenciaActual) {
+        setObservacion(transferenciaActual.observacion || "");
+      }
+    } else {
+      setObservacion("");
     }
-  });
+  }, [transferenciaSeleccionada, transferencias]);
+
+  // 🛡️ ESCUDO DE ESPERA: Solo bloquea si Zustand está buscando los detalles en la BD
+  if (isLoading) {
+    return (
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+        <div style={{ background: "#fff", padding: "25px", borderRadius: "8px", fontWeight: "bold" }}>
+          🔄 Recuperando artículos de la transferencia...
+        </div>
+      </div>
+    );
+  }
 
   const handleAgregarProducto = (e) => {
     e.preventDefault();
-    if (!productoSeleccionado) return toast.error("Por favor, selecciona un producto");
-    if (cantidadInput <= 0) return toast.error("La cantidad debe ser mayor a cero");
+    if (!productoSeleccionado) return toast.error("Selecciona un producto.");
+    if (cantidadInput <= 0) return toast.error("La cantidad debe ser mayor a 0.");
 
-    // Buscar los datos completos del producto en la lista que bajó de la base de datos
-    const prodReal = store.productosDB.find((p) => p.id === parseInt(productoSeleccionado));
-    
-    store.agregarProductoTransferencia(prodReal, cantidadInput);
-    
-    // Resetear selectores de producto
-    setProductoSeleccionado("");
-    setCantidadInput(1);
+    const prodReal = productosDB.find((p) => p.id === parseInt(productoSeleccionado));
+    if (prodReal) {
+      agregarProductoTransferencia(prodReal, cantidadInput);
+      setProductoSeleccionado("");
+      setCantidadInput(1);
+    }
   };
 
   const handleGuardarTodo = async () => {
+    setGuardando(true);
     try {
-      // Pasamos el id del usuario de tu store global
-      await store.guardarTransferencia(datausuarios?.id, observacion);
-      toast.success("¡Transferencia e inventario procesados correctamente!");
+      await guardarTransferencia(datausuarios?.id, observacion);
+      toast.success(transferenciaSeleccionada ? "¡Cambios guardados!" : "¡Transferencia creada!");
+      queryClient.invalidateQueries(["historialTransferencias"]);
       onClose();
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.message || "Error al procesar.");
+    } finally {
+      setGuardando(false);
     }
   };
 
   return (
-    <div className="modal-transferencia" style={{ padding: "25px", background: "#fff", borderRadius: "12px", width: "550px", boxShadow: "0px 5px 15px rgba(0,0,0,0.2)" }}>
-      <h2 style={{ marginTop: 0, color: "#2c3e50" }}>Crear Nueva Transferencia</h2>
-      
-      {/* DATOS DE CONTROL */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "20px" }}>
-        <div>
-          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Fecha de Operación:</label>
-          <input 
-            type="date" 
-            style={{ width: "90%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
-            value={store.fechaTransferencia} 
-            onChange={(e) => store.setFechaTransferencia(e.target.value)} 
-          />
-        </div>
+    <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+      <div style={{ background: "#fff", padding: "25px", borderRadius: "12px", width: "550px", boxShadow: "0px 5px 15px rgba(0,0,0,0.3)" }}>
         
-        <div>
-          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Almacén Origen:</label>
-          <select 
-            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
-            value={store.almacenOrigen}
-            onChange={(e) => store.setAlmacenOrigen(e.target.value)}
-          >
-            <option value="">-- Seleccione Origen --</option>
-            {store.almacenesDB.map(almacen => (
-              <option key={almacen.id} value={almacen.id}>{almacen.nombre}</option>
-            ))}
-          </select>
+        <h2 style={{ marginTop: 0, color: "#2c3e50" }}>
+          {transferenciaSeleccionada ? `✏️ Editando: Transferencia #${transferenciaSeleccionada}` : "🚀 Nueva Transferencia"}
+        </h2>
+
+        {/* --- CABECERA --- */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "15px" }}>
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: "bold", display: "block", marginBottom: "4px" }}>Fecha:</label>
+            <input 
+              type="date" 
+              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} 
+              value={fechaTransferencia || ""} 
+              onChange={(e) => setFechaTransferencia(e.target.value)} 
+            />
+          </div>
+          
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: "bold", display: "block", marginBottom: "4px" }}>Almacén Origen:</label>
+            <select 
+              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} 
+              value={almacenOrigen || ""} 
+              onChange={(e) => setAlmacenOrigen(e.target.value)}
+            >
+              <option value="">-- Seleccione Origen --</option>
+              {almacenesDB.map(a => (
+                <option key={a.id} value={a.id.toString()}>{a.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ gridColumn: "span 2" }}>
+            <label style={{ fontSize: "12px", fontWeight: "bold", display: "block", marginBottom: "4px" }}>Almacén Destino:</label>
+            <select 
+              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} 
+              value={almacenDestino || ""} 
+              onChange={(e) => setAlmacenDestino(e.target.value)}
+            >
+              <option value="">-- Seleccione Destino --</option>
+              {almacenesDB.map(a => (
+                <option key={a.id} value={a.id.toString()}>{a.nombre}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div style={{ gridColumn: "span 2" }}>
-          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Almacén Destino:</label>
-          <select 
-            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
-            value={store.almacenDestino}
-            onChange={(e) => store.setAlmacenDestino(e.target.value)}
-          >
-            <option value="">-- Seleccione Destino --</option>
-            {store.almacenesDB.map(almacen => (
-              <option key={almacen.id} value={almacen.id}>{almacen.nombre}</option>
-            ))}
+        {/* --- AGREGAR PRODUCTOS --- */}
+        <form onSubmit={handleAgregarProducto} style={{ display: "flex", gap: "5px", marginBottom: "15px", background: "#f8f9fa", padding: "10px", borderRadius: "8px" }}>
+          <select style={{ flex: 2, padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} value={productoSeleccionado} onChange={(e) => setProductoSeleccionado(e.target.value)}>
+            <option value="">Buscar producto...</option>
+            {productosDB.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
-        </div>
-      </div>
+          <input type="number" style={{ flex: 1, padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} placeholder="Cant." value={cantidadInput} onChange={(e) => setCantidadInput(e.target.value)} />
+          <button type="submit" style={{ background: "#2c3e50", color: "#fff", border: "none", padding: "8px 14px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>+</button>
+        </form>
 
-      {/* AGREGAR PRODUCTOS */}
-      <form onSubmit={handleAgregarProducto} style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "20px", background: "#f8f9fa", padding: "12px", borderRadius: "8px", border: "1px solid #e9ecef" }}>
-        <div style={{ flex: 2 }}>
-          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Buscar Producto:</label>
-          <select 
-            style={{ width: "100%", padding: "8px", borderRadius: "4px" }}
-            value={productoSeleccionado} 
-            onChange={(e) => setProductoSeleccionado(e.target.value)}
-          >
-            <option value="">{cargandoProductos ? "Cargando catálogo..." : "-- Elegir Producto --"}</option>
-            {store.productosDB.map(p => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
-          </select>
+        {/* --- LISTA DE PRODUCTOS --- */}
+        <div style={{ maxHeight: "160px", overflowY: "auto", border: "1px solid #ddd", marginBottom: "15px", borderRadius: "6px" }}>
+          <table width="100%" style={{ borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ background: "#f1f2f6", textAlign: "left" }}>
+                <th style={{ padding: "10px" }}>Producto</th>
+                <th style={{ padding: "10px", width: "80px" }}>Cantidad</th>
+                <th style={{ padding: "10px", width: "50px", textAlign: "center" }}>Quitar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productosTransferir.length === 0 ? (
+                <tr>
+                  <td colSpan="3" style={{ padding: "15px", textAlign: "center", color: "#7f8c8d", fontStyle: "italic" }}>
+                    No hay productos en esta transferencia.
+                  </td>
+                </tr>
+              ) : (
+                productosTransferir.map((prod) => (
+                  <tr key={prod.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "10px" }}>{prod.nombre}</td>
+                    <td style={{ padding: "10px", fontWeight: "bold" }}>{prod.cantidad}</td>
+                    <td style={{ padding: "10px", textAlign: "center" }}>
+                      <button 
+                        type="button" 
+                        onClick={() => eliminarProductoTransferencia(prod.id)} 
+                        style={{ color: "#e74c3c", border: "none", background: "none", cursor: "pointer", fontSize: "14px" }}
+                      >
+                        ❌
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Cantidad:</label>
+
+        {/* --- OBSERVACIONES --- */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ fontSize: "12px", fontWeight: "bold", display: "block", marginBottom: "4px" }}>Observaciones:</label>
           <input 
-            type="number" 
-            min="1" 
-            style={{ width: "80%", padding: "8px", borderRadius: "4px" }}
-            value={cantidadInput} 
-            onChange={(e) => setCantidadInput(e.target.value)} 
+            type="text" 
+            style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }} 
+            value={observacion} 
+            onChange={(e) => setObservacion(e.target.value)} 
           />
         </div>
-        <button type="submit" style={{ background: "#2c3e50", color: "#fff", padding: "9px 15px", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>
-          + Añadir
-        </button>
-      </form>
 
-      {/* TABLA DE PRODUCTOS PRE-SELECCIONADOS */}
-      <h4 style={{ margin: "10px 0" }}>Detalle del Movimiento</h4>
-      <div style={{ maxHeight: "150px", overflowY: "auto", border: "1px solid #dee2e6", borderRadius: "4px", marginBottom: "15px" }}>
-        <table width="100%" style={{ borderCollapse: "collapse" }} cellPadding="8">
-          <thead>
-            <tr style={{ background: "#e9ecef", textAlign: "left", fontSize: "14px" }}>
-              <th>Producto</th>
-              <th style={{ textAlign: "center" }}>Cantidad</th>
-              <th style={{ textAlign: "center" }}>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {store.productosTransferir.map((prod) => (
-              <tr key={prod.id} style={{ borderBottom: "1px solid #dee2e6", fontSize: "14px" }}>
-                <td>{prod.nombre}</td>
-                <td align="center" style={{ fontWeight: "bold" }}>{prod.cantidad}</td>
-                <td align="center">
-                  <button 
-                    type="button"
-                    onClick={() => store.eliminarProductoTransferencia(prod.id)}
-                    style={{ color: "#e74c3c", border: "none", background: "none", cursor: "pointer", fontWeight: "bold" }}
-                  >
-                    Quitar ❌
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {store.productosTransferir.length === 0 && (
-              <tr>
-                <td colSpan="3" align="center" style={{ color: "#7f8c8d", padding: "15px" }}>No has agregado ningún ítem todavía.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        {/* --- BOTONES --- */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <button 
+            type="button" 
+            onClick={() => { resetFormulario(); onClose(); }} 
+            style={{ padding: "8px 16px", borderRadius: "4px", border: "1px solid #ccc", cursor: "pointer", background: "#fff" }}
+          >
+            Cancelar
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={handleGuardarTodo} 
+            disabled={guardando} 
+            style={{ padding: "8px 16px", background: "#27ae60", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+          >
+            {guardando ? "Guardando..." : "Guardar Cambios"}
+          </button>
+        </div>
 
-      {/* SUMA AUTOMÁTICA */}
-      <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "15px", marginBottom: "15px", color: "#2c3e50" }}>
-        Total de Unidades a Mover: <span style={{ color: "#e67e22", fontSize: "18px" }}>{store.totalCantidadProductos}</span>
-      </div>
-
-      <div style={{ marginBottom: "20px" }}>
-        <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Observaciones / Justificación:</label>
-        <input 
-          type="text" 
-          placeholder="Escribe el motivo del traslado aquí..."
-          style={{ width: "96%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
-          value={observacion} 
-          onChange={(e) => setObservacion(e.target.value)} 
-        />
-      </div>
-
-      {/* BOTONES DE CIERRE */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-        <button 
-          onClick={() => { store.resetFormulario(); onClose(); }} 
-          style={{ padding: "8px 15px", background: "#bdc3c7", border: "none", borderRadius: "4px", cursor: "pointer" }}
-        >
-          Cancelar
-        </button>
-        <button 
-          onClick={handleGuardarTodo} 
-          disabled={store.productosTransferir.length === 0}
-          style={{ padding: "8px 15px", background: store.productosTransferir.length === 0 ? "#95a5a6" : "#27ae60", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
-        >
-          Confirmar y Enviar
-        </button>
       </div>
     </div>
   );
