@@ -49,19 +49,27 @@ export const useTransferenciasStore = create((set, get) => ({
     set({ transferencias: data || [], isLoading: false });
   },
 
-  // Acción 1: Cambiar estado a RECIBIDO
-  recibirTransferencia: async (id) => {
-    const { error } = await supabase
-      .from("transferencia_almacen")
-      .update({ estado: "RECIBIDO" })
-      .eq("id", id);
+  // Acción 1: Cambiar estado a RECIBIDO invocando la función transaccional RPC
+  recibirTransferencia: async (idTransferencia, idUsuarioConectado) => {
+    if (!idTransferencia || !idUsuarioConectado) {
+      throw new Error("Parámetros faltantes: ID de transferencia o ID de usuario no válidos.");
+    }
+
+    // Ejecutamos la función transaccional en el backend de Supabase
+    const { data, error } = await supabase.rpc('procesar_recepcion_transferencia_almacen', {
+      p_transferencia_id: Number(idTransferencia),
+      p_usuario_id: Number(idUsuarioConectado)
+    });
+
     if (error) throw error;
+
+    // Refrescamos automáticamente la tabla principal para actualizar los estados visuales en el frontend
     await get().mostrarTransferencias();
+    return data;
   },
 
   // Acción 2: Eliminar transferencia y sus detalles por CASCADE o limpieza manual
   eliminarTransferencia: async (id) => {
-    
     await supabase.from("detalle_transferencia").delete().eq("id_transferencia", id);
     
     const { error } = await supabase.from("transferencia_almacen").delete().eq("id", id);
@@ -70,15 +78,12 @@ export const useTransferenciasStore = create((set, get) => ({
   },
 
   // Acción 3: Cargar datos para edición
- // Busca y reemplaza por completo la función prepararEdicion dentro de tu TransferenciasStore.jsx:
-
-prepararEdicion: async (transferencia) => {
+  prepararEdicion: async (transferencia) => {
     if (!transferencia) return;
     set({ isLoading: true });
     
     console.log("👉 OBJETO COMPLETO RECIBIDO DE LA TABLA:", transferencia);
 
-    // 1. Identificamos campos de forma flexible
     const idReal = transferencia.id || transferencia.id_transferencia;
     const origenReal = transferencia.id_almacen_origen || transferencia.id_origen || transferencia.almacen_origen;
     const destinoReal = transferencia.id_almacen_destino || transferencia.id_destino || transferencia.almacen_destino;
@@ -88,7 +93,6 @@ prepararEdicion: async (transferencia) => {
       ? fechaOriginal.split("T")[0] 
       : new Date().toISOString().split("T")[0];
 
-    // Inyectamos la cabecera inmediatamente al estado
     set({
       transferenciaSeleccionada: idReal || null,
       almacenOrigen: origenReal ? origenReal.toString() : "",
@@ -104,7 +108,6 @@ prepararEdicion: async (transferencia) => {
     }
 
     try {
-      // 2. Traemos solo los datos numéricos crudos del detalle (sin joins que se puedan romper)
       const { data: detalles, error: errorDetalle } = await supabase
         .from("detalle_transferencia")
         .select("id_producto, cantidad")
@@ -113,16 +116,13 @@ prepararEdicion: async (transferencia) => {
       if (errorDetalle) throw errorDetalle;
 
       if (detalles && detalles.length > 0) {
-        // 3. Extraemos todos los IDs de productos para buscar sus nombres en bloque
         const idsProductos = detalles.map(d => d.id_producto);
 
-        // Nota: Si tu tabla de productos se llama 'producto' (singular), cámbialo abajo
         const { data: productos, error: errorProd } = await supabase
           .from("productos") 
           .select("id, nombre")
           .in("id", idsProductos);
 
-        // 4. Cruzamos la información en memoria (Frontend) de forma segura
         const productosMapeados = detalles.map(d => {
           const infoProducto = productos?.find(p => p.id === d.id_producto);
           return {
@@ -179,7 +179,6 @@ prepararEdicion: async (transferencia) => {
     let idTransferencia = transferenciaSeleccionada;
 
     if (idTransferencia) {
-      // Editar
       const { error: errCab } = await supabase
         .from("transferencia_almacen")
         .update({
@@ -193,7 +192,6 @@ prepararEdicion: async (transferencia) => {
       if (errCab) throw errCab;
       await supabase.from("detalle_transferencia").delete().eq("id_transferencia", idTransferencia);
     } else {
-      // Registrar Nueva -> Estado Inicial: ENVIADO 🚀
       const { data: cabecera, error: errCab } = await supabase
         .from("transferencia_almacen")
         .insert({

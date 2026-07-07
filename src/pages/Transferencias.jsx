@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTransferenciasStore } from "../store/TransferenciasStore";
+import { useUsuariosStore } from "../store/UsuariosStore"; // <-- Importamos tu store real
 import { RegistrarTransferencia } from "../components/organismos/formularios/RegistrarTransferencia";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaPencil, FaTrashCan, FaPlus } from "react-icons/fa6";
@@ -7,8 +8,12 @@ import { toast } from "sonner";
 
 export const Transferencias = () => {
   const store = useTransferenciasStore();
+  const storeUsuarios = useUsuariosStore(); // <-- Instanciamos tu store de usuarios
   const [openForm, setOpenForm] = useState(false);
   const queryClient = useQueryClient();
+
+  // Extraemos el id del usuario activo desde tu propiedad "datausuarios"
+  const idUsuarioReal = storeUsuarios.datausuarios?.id;
 
   const { isLoading } = useQuery({
     queryKey: ["historialTransferencias"],
@@ -18,13 +23,27 @@ export const Transferencias = () => {
     }
   });
 
-  const handleRecibir = async (id) => {
+  const handleRecibir = async (idTransferencia) => {
+    const confirmar = window.confirm("¿Estás seguro de que deseas recibir los productos de esta transferencia?");
+    if (!confirmar) return;
+
+    // Validación de seguridad con alerta nativa por si no tienes configurado Sonner en el Layout
+    if (!idUsuarioReal) {
+      console.error("Store de usuarios actual:", storeUsuarios.datausuarios);
+      alert("❌ Error: No se detectó el ID del usuario en 'datausuarios'. Asegúrate de haber iniciado sesión correctamente.");
+      return;
+    }
+
     try {
-      await store.recibirTransferencia(id);
-      toast.success("¡Mercancía recibida e inventario actualizado!");
+      // Invocamos la acción de tu TransferenciasStore pasando los parámetros limpios
+      await store.recibirTransferencia(idTransferencia, idUsuarioReal);
+
+      toast.success("✅ ¡Éxito! Transferencia recibida e inventario actualizado.");
       queryClient.invalidateQueries(["historialTransferencias"]);
-    } catch (e) { 
-      toast.error(e.message); 
+
+    } catch (error) {
+      console.error("Error atrapado al recibir:", error);
+      toast.error("❌ No se pudo recibir la mercancía: " + error.message);
     }
   };
 
@@ -96,7 +115,7 @@ export const Transferencias = () => {
               </tr>
             </thead>
             <tbody>
-              {store.transferencias.map((item) => {
+              {store.transferencias && store.transferencias.map((item) => {
                 const estadoLimpio = item.estado ? item.estado.toUpperCase().trim() : "";
                 return (
                   <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
@@ -113,7 +132,12 @@ export const Transferencias = () => {
                       <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                         {estadoLimpio !== "RECIBIDO" ? (
                           <>
-                            <button onClick={() => handleRecibir(item.id)} style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Recibir</button>
+                            <button 
+                              onClick={() => handleRecibir(item.id)} 
+                              style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", padding: "5px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
+                            >
+                              Recibir
+                            </button>
                             <button onClick={() => handleEditar(item)} style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "5px 10px", borderRadius: "6px", cursor: "pointer" }}><FaPencil size={12} /></button>
                           </>
                         ) : <span style={{ color: "#94a3b8", fontSize: "12px" }}>Finalizado</span>}
